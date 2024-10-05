@@ -49,7 +49,7 @@ print(result)
 ## Installation
 
 - Make sure rust tool chain (`cargo`) is installed and in the `PATH` environment variable.
-- Install with `pip install git+https://github.com/ntobler/startracker.git`.
+- Install with `pip install git+https://github.com/ntobler/ruststartracker.git`.
 
 ## TODOs
 
