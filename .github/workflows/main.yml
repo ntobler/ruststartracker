@@ -1,0 +1,29 @@
+name: Python CI/CD Pipeline
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        pip install poetry
+        POETRY_VIRTUALENVS_CREATE=false poetry install
+
+    - name: Pre-commit checks
+      run: |
+        PYTHONFAULTHANDLER=1 pre-commit run --all-files
+
+    - name: Run pytest
+      run: |
+        pytest
