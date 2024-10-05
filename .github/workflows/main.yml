@@ -46,22 +46,27 @@ jobs:
         architecture: [x86-64, arm64]
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-    - name: Setup rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          POETRY_VIRTUALENVS_CREATE=false poetry install
 
-    - name: Create package
-      run: |
-        poetry build --format=wheel
+      - name: Setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Create package
+        run: |
+          poetry build --format=wheel
 
   release:
     runs-on: ubuntu-latest
