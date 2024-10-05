@@ -2,8 +2,13 @@ name: Python CI/CD Pipeline
 
 on: [push, pull_request]
 
+permissions:
+  contents: write
+  issues: write
+
+
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -33,8 +38,12 @@ jobs:
       with:
         command: test
 
-  release:
+  build-python-wheels:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        architecture: [x86-64, arm64]
 
     steps:
     - name: Checkout code
@@ -52,11 +61,17 @@ jobs:
 
     - name: Create package
       run: |
-        cargo build --release --all-features
+        poetry build --format=wheel
 
+  release:
+    runs-on: ubuntu-latest
+    needs:
+        - build-python-wheels
+
+    steps:
     - name: Zip release
       run: |
-        zip -r build.zip target/release/libruststartracker.so
+        zip -r dist.zip dist
 
     - name: Create Release
       id: create_release
