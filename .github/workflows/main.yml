@@ -33,11 +33,14 @@ jobs:
       with:
         command: test
 
-    - name: Create package
+    - name: Setup rust toolchain
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
-      run: cargo build --release --all-features
+  
+    - name: Create package
+      run: |
+        cargo build --release --all-features
 
     - name: Zip release
       run: |
