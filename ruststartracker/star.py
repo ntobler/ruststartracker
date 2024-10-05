@@ -198,11 +198,11 @@ class StarTracker:
         x_obs = np.ascontiguousarray(x_obs, dtype=np.float32)
 
         # Match stars in rust backend (numpy can't keep up with this)
-        result = self._star_matcher.find(x_obs)
-
-        if result is None:
+        try:
+            result = self._star_matcher.find(x_obs)
+        except RuntimeError as e:
             # TODO provide better diagnostic e.g. minimum error etc.
-            raise StarTrackerError("Couldn't find stars.")
+            raise StarTrackerError("Couldn't find stars.") from e
 
         quat, match_ids, n_matches, matched_obs, duration_s = result
 
