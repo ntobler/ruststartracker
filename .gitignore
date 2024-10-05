@@ -1,0 +1,11 @@
+Cargo.lock
+poetry.lock
+
+target/*
+.venv
+.pytest_cache
+.vscode
+
+__pycache__
+
+ruststartracker/libruststartracker.so
