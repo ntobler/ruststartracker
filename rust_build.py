@@ -15,7 +15,6 @@ def rust_build() -> None:
     shutil.copy(
         cwd / "target/release/libruststartracker.so", cwd / "ruststartracker/libruststartracker.so"
     )
-    subprocess.check_call(["cargo", "clean"], cwd=cwd)  # noqa: S603, S607
 
 
 if __name__ == "__main__":
