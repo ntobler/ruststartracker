@@ -90,6 +90,7 @@ class StarTracker:
         max_inter_star_angle: float | None = None,
         inter_star_angle_tolerance: float = 0.0008,
         n_minimum_matches: int = 10,
+        timeout_secs: float = 1.0,
     ) -> None:
         """Set up star tracker environment for faster computation.
 
@@ -102,6 +103,8 @@ class StarTracker:
             inter_star_angle_tolerance: Tolerance for inter star angle matching.
             n_minimum_matches: Minimum amount of required matches for a successful
                 attitude estimation
+            timeout_secs: Maximum allowed search time in seconds. A StarTrackerError is raised
+                when the timeout elapses
         """
         self._camera_params = camera_params
         self._camera_mat_inv = np.linalg.inv(self._camera_params.camera_matrix)
@@ -127,6 +130,7 @@ class StarTracker:
             float(max_inter_star_angle),
             float(inter_star_angle_tolerance),
             int(n_minimum_matches),
+            float(timeout_secs),
         )
 
     def process_image(
@@ -202,7 +206,7 @@ class StarTracker:
             result = self._star_matcher.find(x_obs)
         except RuntimeError as e:
             # TODO provide better diagnostic e.g. minimum error etc.
-            raise StarTrackerError("Couldn't find stars.") from e
+            raise StarTrackerError(*e.args) from e
 
         quat, match_ids, n_matches, matched_obs, duration_s = result
 

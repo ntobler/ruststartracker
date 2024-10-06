@@ -12,6 +12,7 @@ class StarMatcher:
         max_inter_star_angle: float,
         inter_star_angle_tolerance: float,
         n_minimum_matches: int,
+        timeout_secs: float,
     ) -> None: ...
     def find(
         self, obs_xyz: npt.NDArray[np.float32]

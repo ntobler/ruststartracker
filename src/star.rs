@@ -1,5 +1,6 @@
 use crate::tree;
 use crate::trianglefinder;
+use std::time::Instant;
 
 extern crate nalgebra as na;
 
@@ -14,6 +15,7 @@ pub struct StarMatcher {
     inter_star_index_polygon: Vec<f32>,
     max_inter_star_angle: f32,
     n_minimum_matches: usize,
+    timeout_secs: f32,
 }
 
 /// Return angle between two normalized 3-dimensional vectors.
@@ -85,6 +87,7 @@ impl StarMatcher {
         max_inter_star_angle: f32,
         inter_star_angle_tolerance: f32,
         n_minimum_matches: usize,
+        timeout_secs: f32,
     ) -> Self {
         let star_index = tree::UnitVectorLookup::new(&stars_xyz);
 
@@ -100,10 +103,13 @@ impl StarMatcher {
             inter_star_index_polygon: polynom,
             max_inter_star_angle,
             n_minimum_matches,
+            timeout_secs,
         }
     }
 
-    pub fn find(&self, obs_xyz: Vec<[f32; 3]>) -> Option<MatchResult> {
+    pub fn find(&self, obs_xyz: Vec<[f32; 3]>) -> Result<MatchResult, &'static str> {
+        let start_instant = Instant::now();
+
         for obs_indices in self.triangle_combinations_iterator(obs_xyz.len() as u32) {
             let [a, b, c] = obs_indices;
 
@@ -139,13 +145,17 @@ impl StarMatcher {
 
             // Iterate over possible matching triangles
             for value in iter_finder {
-                let result = self.check(&obs_indices, &obs_xyz, &value);
-                if !result.is_none() {
-                    return result;
-                }
+                match self.check(&obs_indices, &obs_xyz, &value) {
+                    None => {}
+                    Some(x) => return Ok(x),
+                };
+            }
+
+            if start_instant.elapsed().as_secs_f32() > self.timeout_secs {
+                return Err("Timeout reached");
             }
         }
-        None
+        Err("Search exhausted")
     }
 
     /// Iterator over combinations of stars forming triangles.

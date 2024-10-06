@@ -157,6 +157,7 @@ impl StarMatcher {
         max_inter_star_angle: f32,
         inter_star_angle_tolerance: f32,
         n_minimum_matches: usize,
+        timeout_secs: f32,
     ) -> Self {
         StarMatcher {
             inner: star::StarMatcher::new(
@@ -164,6 +165,7 @@ impl StarMatcher {
                 max_inter_star_angle,
                 inter_star_angle_tolerance,
                 n_minimum_matches,
+                timeout_secs,
             ),
         }
     }
@@ -176,8 +178,8 @@ impl StarMatcher {
         let res = self.inner.find(obs_xyz);
         let duration_s = now.elapsed().as_secs_f32();
         match res {
-            None => Err(PyRuntimeError::new_err("Could not find attitude.")),
-            Some(x) => Ok((x.quat, x.match_ids, x.n_matches, x.obs_matched, duration_s)),
+            Err(x) => Err(PyRuntimeError::new_err(x)),
+            Ok(x) => Ok((x.quat, x.match_ids, x.n_matches, x.obs_matched, duration_s)),
         }
     }
 }

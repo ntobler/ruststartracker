@@ -115,7 +115,9 @@ def test_star_matcher():
 
     obs_rotated = rot.apply(obs)
 
-    index = libruststartracker.StarMatcher(vec, np.radians(10).item(), np.radians(0.1).item(), 4)
+    index = libruststartracker.StarMatcher(
+        vec, np.radians(10).item(), np.radians(0.1).item(), 4, 999.0
+    )
 
     res = index.find(obs_rotated)
 

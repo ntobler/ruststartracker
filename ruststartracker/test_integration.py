@@ -85,7 +85,6 @@ def test_star_matcher(prepare: tuple[ruststartracker.StarTracker, np.ndarray]):
 
     res = st.process_observation_vectors(obs)
 
-    assert res is not None
     np.testing.assert_allclose(res.quat, rot.inv().as_quat(), rtol=0.001, atol=0.001)
     assert res.n_matches >= 4
 
