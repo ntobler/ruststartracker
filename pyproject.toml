@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "ruststartracker"
-version = "0.1.0"
-description = ""
+version = "0.1.1"
+description = "Leightweight Python Start Tracker With Rust Backend"
 authors = ["Nicolas Tobler <nitobler@gmail.com>"]
 readme = "README.md"
 include = [

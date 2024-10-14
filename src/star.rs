@@ -293,7 +293,7 @@ impl StarMatcher {
             quat: [quat.i as f32, quat.j as f32, quat.k as f32, quat.w as f32],
             match_ids: selected_cat_indices,
             n_matches: selected_cat_xyz.len() as u32,
-            obs_matched: selected_cat_xyz,
+            obs_matched: selected_obs_xyz,
         })
     }
 }
