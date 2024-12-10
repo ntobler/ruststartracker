@@ -6,8 +6,9 @@ import math
 import pathlib
 
 import numpy as np
+import numpy.typing as npt
 
-AU = 149597870.693
+AU: float = 149597870.693
 """Astronomical unit."""
 
 INTERNAL_CATALOG_FILE = pathlib.Path(__file__).parent.expanduser().absolute() / "star_catalog.tsv"
@@ -27,21 +28,21 @@ def time_to_epoch(t: datetime.datetime) -> float:
 class StarCatalog:
     """Star catalog from Hipparcos data."""
 
-    _data: np.ndarray
+    _data: npt.NDArray[np.float32]
     """Underlying data array."""
-    ra: np.ndarray
+    ra: npt.NDArray[np.float32]
     """Right ascension at epoch in rads."""
-    de: np.ndarray
+    de: npt.NDArray[np.float32]
     """Declination at epoch in rads."""
-    parallax: np.ndarray
+    parallax: npt.NDArray[np.float32]
     """Parallax in rads."""
-    proper_motion_ra: np.ndarray
+    proper_motion_ra: npt.NDArray[np.float32]
     """Proper motion of the right ascension in mad."""
-    proper_motion_de: np.ndarray
+    proper_motion_de: npt.NDArray[np.float32]
     """Proper motion of the declination in mad."""
-    magnitude: np.ndarray
+    magnitude: npt.NDArray[np.float32]
     """Magnitude vlaues."""
-    epoch = 1992.25
+    epoch: float = 1992.25
     """Epoch of the catalog in years."""
 
     def __init__(
@@ -103,7 +104,7 @@ class StarCatalog:
 
     def normalized_positions(
         self, *, epoch: float | None = None, observer_position: np.ndarray | None = None
-    ) -> np.ndarray:
+    ) -> npt.NDArray[np.float32]:
         """Get star positions as normalized (x, y, z) vector.
 
         Args:
@@ -121,14 +122,16 @@ class StarCatalog:
         delta_epoch = epoch - self.epoch
 
         # Precalculate sin and cos
-        cos_ra = np.cos(self.ra)
-        sin_ra = np.sin(self.ra)
-        sin_de = np.sin(self.de)
-        cos_de = np.cos(self.de)
+        cos_ra: npt.NDArray[np.float32] = np.cos(self.ra)
+        sin_ra: npt.NDArray[np.float32] = np.sin(self.ra)
+        sin_de: npt.NDArray[np.float32] = np.sin(self.de)
+        cos_de: npt.NDArray[np.float32] = np.cos(self.de)
         zeros = np.zeros_like(self.de)
 
         # Get star positions as normalized vector (x, y, z)
-        vectors = np.stack([cos_de * cos_ra, cos_de * sin_ra, sin_de], axis=-1)
+        vectors: npt.NDArray[np.float32] = np.stack(
+            [cos_de * cos_ra, cos_de * sin_ra, sin_de], axis=-1
+        )
 
         # Correct propper motion
         p_hat = np.stack([-sin_ra, cos_ra, zeros], axis=-1)

@@ -1,6 +1,6 @@
 import datetime
 
-import astropy.time
+import astropy.time  # type: ignore[import]
 import numpy as np
 import pytest
 
