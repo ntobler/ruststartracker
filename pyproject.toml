@@ -23,6 +23,7 @@ pre-commit = "^3.8.0"
 astropy = "^6.1.4"
 mypy = "^1.13.0"
 scipy-stubs = "^1.14.1.5"
+ruff = "^0.8.2"
 
 [tool.poetry.build]
 script = "rust_build.py"
@@ -36,33 +37,39 @@ line-length = 100
 
 [tool.ruff.lint]
 select = [
-    # pycodestyle
-    "E",
-    # pydocstring
-    "D",
     # Pyflakes
     "F",
+    # pycodestyle error
+    "E",
+    # pycodestyle warning
+    "W",
+    # pydocstring
+    "D",
+    # mccabe
+    "C90",
+    # isort
+    "I",
+    # Pep8 naming
+    "N",
     # pyupgrade
     "UP",
+    # flake8-2020
+    "YTT",
+    # flake8-annotations
+    "ANN",
+    # flake8-bandit
+    "S",
     # flake8-bugbear
     "B",
     # flake8-simplify
     "SIM",
-    # isort
-    "I",
     # boolean trap
     "FBT001",
     # Built in shadowing
-    "A001",
-    "C416",
-    "NPY",
-    "PERF",
-    "W",
-    # Pep8 naming
-    "N",
-    "UP",
-    "S",
+    "A",
+    # flake8-comprehensions
     "C4",
+    "NPY",
     "DTZ",
     "T10",
     "EXE",
@@ -72,15 +79,18 @@ select = [
     "PIE",
     "Q",
     "RET",
-    "SLF001",
+    "SLF",
     "TID",
     "TCH",
     "ARG",
     "PTH",
-    "ANN",
+    # Perflint
+    "PERF",
+    # Ruff-specific rules
+    "RUF"
 ]
 ignore = [
-    "ANN101", # Annotating self is not really needed
+    "ISC001" # conflict with formatter
 ]
 pydocstyle.convention = "google"
 

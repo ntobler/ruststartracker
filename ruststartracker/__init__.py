@@ -5,8 +5,8 @@ from ruststartracker.star import CameraParameters, StarTracker, StarTrackerError
 
 __all__ = [
     "CameraParameters",
+    "StarCatalog",
     "StarTracker",
     "StarTrackerError",
     "StarTrackerResult",
-    "StarCatalog",
 ]
