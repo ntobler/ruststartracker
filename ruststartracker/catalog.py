@@ -41,7 +41,7 @@ class StarCatalog:
     proper_motion_de: npt.NDArray[np.float32]
     """Proper motion of the declination in mad."""
     magnitude: npt.NDArray[np.float32]
-    """Magnitude vlaues."""
+    """Magnitude values."""
     epoch: float = 1992.25
     """Epoch of the catalog in years."""
 
@@ -133,7 +133,7 @@ class StarCatalog:
             [cos_de * cos_ra, cos_de * sin_ra, sin_de], axis=-1
         )
 
-        # Correct propper motion
+        # Correct proper motion
         p_hat = np.stack([-sin_ra, cos_ra, zeros], axis=-1)
         q_hat = np.stack([-sin_de * cos_ra, -sin_de * sin_ra, cos_de], axis=-1)
         pm = delta_epoch * (

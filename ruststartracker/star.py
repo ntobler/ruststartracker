@@ -33,7 +33,7 @@ class CameraParameters:
 
 @dataclasses.dataclass(frozen=True)
 class StarTrackerResult:
-    """Result container contining attitude and other information."""
+    """Result container containing attitude and other information."""
 
     quat: npt.NDArray[np.float32]
     """Quaternion attitude (i, j, k, w)"""
@@ -71,10 +71,10 @@ def _image_coords_to_normed_vectors(
         image_coords_corrected = image_coords
 
     # Convert to 3-dimensional unit vectors (+z is the camera direction)
-    homogenous = np.concatenate(
+    homogeneous = np.concatenate(
         (image_coords_corrected, np.ones_like(image_coords_corrected[..., :1])), axis=-1
     )
-    corner_coords_xyz: npt.NDArray[np.float32] = (camera_params.camera_mat_inv @ homogenous.T).T
+    corner_coords_xyz: npt.NDArray[np.float32] = (camera_params.camera_mat_inv @ homogeneous.T).T
     corner_coords_xyz /= np.linalg.norm(corner_coords_xyz, axis=-1, keepdims=True)
     return corner_coords_xyz
 
@@ -179,9 +179,9 @@ class StarTracker:
         if len(centroids) < 3:
             raise StarTrackerError("Found too few star candidates (< 3) to continue.")
 
-        # Sort candidates by thier intensity. Brighter candidates are more likely to be stars
+        # Sort candidates by their intensity. Brighter candidates are more likely to be stars
         bright_star_idx = intensities.argsort()[::-1][:n_candidates]
-        # Limit numer of candidates
+        # Limit number of candidates
         centroids = centroids[bright_star_idx, :]
 
         # Convert image star centroids to 3-dimensional unit vectors (+z is the camera direction)
@@ -230,7 +230,7 @@ def _extract_observations(
 
     Args:
         img: Grayscale image of stars
-        threshold: Threhold level to find star patches. If None, it is chosen automatically.
+        threshold: Threshold level to find star patches. If None, it is chosen automatically.
         min_star_area: Minimum area of a patch, such that it is considered a star observation
         max_star_area: Maximum area of a patch, such that it is considered a star observation
 

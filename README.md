@@ -1,7 +1,7 @@
-# Leightweight Python Start Tracker With Rust Backend
+# Lightweight Python Start Tracker With Rust Backend
 
 Based on the methodology used in https://github.com/nasa/COTS-Star-Tracker, with following improvements:
-- Reduced dependencies to opencv and numpy for leightweight usage in a Raspberry Pi.
+- Reduced dependencies to opencv and numpy for lightweight usage in a Raspberry Pi.
 - Reimplemented computationally expensive parts in rust. This includes most parts that are not image processing related.
 - Added quadratic inter star angle index look up polynom for faster triangle search.
 - Added spatial index to look up neighboring stars.
@@ -9,7 +9,7 @@ Based on the methodology used in https://github.com/nasa/COTS-Star-Tracker, with
 Features:
 - Attitude estimation from image and camera calibration parameters.
 - Attitude estimation from list of star obvervation coordinates.
-- Star catalog creation with tempral corrections.
+- Star catalog creation with temporal corrections.
 
 ## Example
 

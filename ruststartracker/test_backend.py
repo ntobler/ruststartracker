@@ -62,7 +62,7 @@ def test_unit_vector_lookup():
     poly = np.array(poly)
 
     # There are some cases where the float32 accuracy is insufficient to tell
-    # angles apart. Consequently the order may be alightly different. Hovever,
+    # angles apart. Consequently the order may be alightly different. However,
     # we're able to test if the not-matching indices align with items that have
     # at minimum one other angle of the exact same value
     i = (close_indices != close_indices_gt).any(axis=-1)

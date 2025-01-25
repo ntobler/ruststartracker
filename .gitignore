@@ -9,3 +9,5 @@ target/*
 __pycache__
 
 ruststartracker/libruststartracker.so
+
+.coverage
