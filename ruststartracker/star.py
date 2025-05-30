@@ -133,7 +133,7 @@ class StarTracker:
             float(timeout_secs),
         )
 
-    def get_observations(
+    def get_centroids(
         self,
         img: npt.NDArray[np.uint8],
         darkframe: npt.NDArray[np.uint8] | None = None,
@@ -142,7 +142,7 @@ class StarTracker:
         min_star_area: int = 4,
         max_star_area: int = 36,
     ) -> npt.NDArray[np.float32]:
-        """Estimate attitude given a camera image."""
+        """Get star centroid image coordinates from a camera image."""
         if (
             (img.ndim != 2)
             or (img.dtype != np.uint8)
@@ -182,10 +182,7 @@ class StarTracker:
         # Sort candidates by their intensity. Brighter candidates are more likely to be stars
         bright_star_idx = intensities.argsort()[::-1][:n_candidates]
         # Limit number of candidates
-        centroids = centroids[bright_star_idx, :]
-
-        # Convert image star centroids to 3-dimensional unit vectors (+z is the camera direction)
-        return _image_coords_to_normed_vectors(self._camera_params, centroids)
+        return centroids[bright_star_idx, :]
 
     def process_image(
         self,
@@ -197,9 +194,11 @@ class StarTracker:
         max_star_area: int = 36,
     ) -> StarTrackerResult:
         """Estimate attitude given a camera image."""
-        x_obs = self.get_observations(
+        centroids = self.get_centroids(
             img, darkframe, n_candidates, threshold, min_star_area, max_star_area
         )
+        # Convert image star centroids to 3-dimensional unit vectors (+z is the camera direction)
+        x_obs = _image_coords_to_normed_vectors(self._camera_params, centroids)
         return self.process_observation_vectors(x_obs)
 
     def process_observation_vectors(self, x_obs: npt.NDArray[np.float32]) -> StarTrackerResult:
