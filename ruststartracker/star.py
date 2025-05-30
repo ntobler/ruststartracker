@@ -99,7 +99,7 @@ class StarTracker:
             camera_params: Calibrated camera parameters
             max_inter_star_angle: Maximum angle between stars that should be indexed.
                 Calculating large inter star angles is expensive. If None, the angle is
-                calcululated from the camera field of view.
+                calculated from the camera field of view.
             inter_star_angle_tolerance: Tolerance for inter star angle matching.
             n_minimum_matches: Minimum amount of required matches for a successful
                 attitude estimation
@@ -133,7 +133,7 @@ class StarTracker:
             float(timeout_secs),
         )
 
-    def process_image(
+    def get_observations(
         self,
         img: npt.NDArray[np.uint8],
         darkframe: npt.NDArray[np.uint8] | None = None,
@@ -141,7 +141,7 @@ class StarTracker:
         threshold: int | None = None,
         min_star_area: int = 4,
         max_star_area: int = 36,
-    ) -> StarTrackerResult:
+    ) -> npt.NDArray[np.float32]:
         """Estimate attitude given a camera image."""
         if (
             (img.ndim != 2)
@@ -185,8 +185,21 @@ class StarTracker:
         centroids = centroids[bright_star_idx, :]
 
         # Convert image star centroids to 3-dimensional unit vectors (+z is the camera direction)
-        x_obs = _image_coords_to_normed_vectors(self._camera_params, centroids)
+        return _image_coords_to_normed_vectors(self._camera_params, centroids)
 
+    def process_image(
+        self,
+        img: npt.NDArray[np.uint8],
+        darkframe: npt.NDArray[np.uint8] | None = None,
+        n_candidates: int = 30,
+        threshold: int | None = None,
+        min_star_area: int = 4,
+        max_star_area: int = 36,
+    ) -> StarTrackerResult:
+        """Estimate attitude given a camera image."""
+        x_obs = self.get_observations(
+            img, darkframe, n_candidates, threshold, min_star_area, max_star_area
+        )
         return self.process_observation_vectors(x_obs)
 
     def process_observation_vectors(self, x_obs: npt.NDArray[np.float32]) -> StarTrackerResult:
