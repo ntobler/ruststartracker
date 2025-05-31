@@ -251,6 +251,7 @@ impl StarMatcher {
         let mut selected_obs_xyz = Vec::new();
         let mut selected_cat_xyz = Vec::new();
         let mut selected_cat_indices = Vec::new();
+        let mut selected_obs_indices = Vec::new();
         for obs_i in 0..obs_transformed.ncols() {
             // version 1: use spatial look up
             let obs_vec = obs_transformed.column(obs_i);
@@ -264,7 +265,8 @@ impl StarMatcher {
             if tree::dot_product(&obs, closest_cat_star) >= dotp_threshold {
                 selected_cat_xyz.push(*closest_cat_star);
                 selected_obs_xyz.push(obs_xyz[obs_i]);
-                selected_cat_indices.push(closest_index as u32)
+                selected_cat_indices.push(closest_index as u32);
+                selected_obs_indices.push(obs_i as u32);
             }
         }
 
@@ -294,6 +296,7 @@ impl StarMatcher {
             match_ids: selected_cat_indices,
             n_matches: selected_cat_xyz.len() as u32,
             obs_matched: selected_obs_xyz,
+            obs_indices: selected_obs_indices,
         })
     }
 }
@@ -303,6 +306,7 @@ pub struct MatchResult {
     pub match_ids: Vec<u32>,
     pub n_matches: u32,
     pub obs_matched: Vec<[f32; 3]>,
+    pub obs_indices: Vec<u32>,
 }
 
 /// Solve Wahba's problem using SVD method.

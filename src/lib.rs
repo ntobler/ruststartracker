@@ -173,13 +173,20 @@ impl StarMatcher {
     pub fn find(
         &self,
         obs_xyz: Vec<[f32; 3]>,
-    ) -> PyResult<([f32; 4], Vec<u32>, u32, Vec<[f32; 3]>, f32)> {
+    ) -> PyResult<([f32; 4], Vec<u32>, Vec<u32>, u32, Vec<[f32; 3]>, f32)> {
         let now = Instant::now();
         let res = self.inner.find(obs_xyz);
         let duration_s = now.elapsed().as_secs_f32();
         match res {
             Err(x) => Err(PyRuntimeError::new_err(x)),
-            Ok(x) => Ok((x.quat, x.match_ids, x.n_matches, x.obs_matched, duration_s)),
+            Ok(x) => Ok((
+                x.quat,
+                x.match_ids,
+                x.obs_indices,
+                x.n_matches,
+                x.obs_matched,
+                duration_s,
+            )),
         }
     }
 }

@@ -45,6 +45,8 @@ class StarTrackerResult:
     """Processing duration in seconds."""
     mached_obs_x: npt.NDArray[np.float32]
     """Matched observation coordinates (x, y, z) , shape=[n_matches, 3]."""
+    obs_indices: npt.NDArray[np.uint32]
+    """Observation point indices of matches."""
 
 
 def _image_coords_to_normed_vectors(
@@ -232,7 +234,7 @@ class StarTracker:
             # TODO provide better diagnostic e.g. minimum error etc.
             raise StarTrackerError(*e.args) from e
 
-        quat, match_ids, n_matches, matched_obs, duration_s = result
+        quat, match_ids, obs_indices, n_matches, matched_obs, duration_s = result
 
         return StarTrackerResult(
             quat=np.asarray(quat, dtype=np.float32),
@@ -240,6 +242,7 @@ class StarTracker:
             n_matches=n_matches,
             duration_s=duration_s,
             mached_obs_x=np.asarray(matched_obs, dtype=np.float32),
+            obs_indices=np.asarray(obs_indices, dtype=np.uint32),
         )
 
 

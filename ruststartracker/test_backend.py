@@ -123,9 +123,10 @@ def test_star_matcher():
 
     assert res is not None
 
-    quat, match_ids, n_matches, matched_obs, time_s = res
+    quat, match_ids, obs_indices, n_matches, matched_obs, time_s = res
     np.testing.assert_allclose(quat, rot.inv().as_quat())
     assert n_matches >= 4
+    assert len(obs_index) == len(match_ids)
 
 
 if __name__ == "__main__":

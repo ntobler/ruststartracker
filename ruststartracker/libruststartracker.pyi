@@ -16,7 +16,14 @@ class StarMatcher:
     ) -> None: ...
     def find(
         self, obs_xyz: npt.NDArray[np.float32]
-    ) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.uint32], int, list[list[float]], float]: ...
+    ) -> tuple[
+        npt.NDArray[np.float32],
+        npt.NDArray[np.uint32],
+        npt.NDArray[np.uint32],
+        int,
+        list[list[float]],
+        float,
+    ]: ...
 
 class TriangleFinder:
     def __init__(
