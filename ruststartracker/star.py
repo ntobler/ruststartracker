@@ -201,7 +201,19 @@ class StarTracker:
         x_obs = _image_coords_to_normed_vectors(self._camera_params, centroids)
         return self.process_observation_vectors(x_obs)
 
-    def process_observation_vectors(self, x_obs: npt.NDArray[np.float32]) -> StarTrackerResult:
+    def process_image_coordiantes(self, image_xy: npt.NDArray[np.floating]) -> StarTrackerResult:
+        """Estimate attitude given star image coordinates.
+
+        Args:
+            image_xy: Image positions of stars, shape=[n, 2].
+
+        Returns:
+            Result container with attitude.
+        """
+        x_obs = _image_coords_to_normed_vectors(self._camera_params, image_xy)
+        return self.process_observation_vectors(x_obs)
+
+    def process_observation_vectors(self, x_obs: npt.NDArray[np.floating]) -> StarTrackerResult:
         """Estimate attitude given star observations.
 
         Args:
