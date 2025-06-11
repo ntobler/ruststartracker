@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ruststartracker"
-version = "0.1.7"
+version = "0.1.8"
 description = "Lightweight Python Start Tracker With Rust Backend"
 authors = ["Nicolas Tobler <nitobler@gmail.com>"]
 readme = "README.md"
@@ -106,7 +106,15 @@ warn_return_any = true
 warn_unused_configs = true
 
 [tool.pytest.ini_options]
-addopts = "--cov --cov-fail-under=95"
+addopts = "--cov=ruststartracker --cov-report xml --cov-report term --cov-fail-under=95"
 
 [tool.codespell]
 ignore-words-list = "crate"
+
+[tool.coverage.report]
+exclude_lines = [
+    'if __name__ == "__main__":',
+    'if plot:',
+    'if debug:',
+    'if verbose:',
+]

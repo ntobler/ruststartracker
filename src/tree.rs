@@ -39,6 +39,7 @@ impl UnitVectorLookup {
                 let vec_b = &vectors[*b];
                 let dotp = dot_product(vec_a, vec_b);
                 if dotp < threshold {
+                    // If angle is too large, break here
                     break;
                 }
                 if a < *b {

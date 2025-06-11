@@ -1,10 +1,11 @@
 use numpy::{self, PyUntypedArrayMethods};
 use pyo3::{
-    exceptions::PyRuntimeError, pyclass, pyfunction, pymethods, pymodule, types::PyModule,
-    wrap_pyfunction, Bound, PyRef, PyRefMut, PyResult,
+    exceptions::PyRuntimeError, pyclass, pymethods, pymodule, types::PyModule, Bound, PyRef,
+    PyRefMut, PyResult,
 };
 use std::{time::Instant, usize};
 
+mod ordered_combinations;
 mod star;
 mod tree;
 mod trianglefinder;
@@ -12,74 +13,10 @@ mod util;
 
 #[pymodule]
 fn libruststartracker(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(main_scratch, m)?)?;
     m.add_class::<TriangleFinder>()?;
     m.add_class::<IterTriangleFinder>()?;
     m.add_class::<StarMatcher>()?;
     m.add_class::<UnitVectorLookup>()?;
-    Ok(())
-}
-
-#[pyfunction]
-fn main_scratch() -> PyResult<()> {
-    // TODO remove me
-    let connections_ab = vec![[234, 5643], [1, 2], [2, 4], [3, 9], [2, 6]];
-    let connections_ac = vec![[345, 2343], [8, 2], [3, 4], [1, 7], [0, 5], [3, 1]];
-    let connections_bc = vec![[435, 4355], [1, 0], [4, 8], [8, 1], [1, 9]];
-
-    let finder =
-        trianglefinder::TriangleFinder::new(connections_ab, connections_ac, connections_bc);
-
-    let now = Instant::now();
-
-    let found: Option<[u32; 3]> = finder.get();
-    println!("Time passed: {:?}", now.elapsed());
-    match found {
-        None => println!("not found"),
-        Some(value) => println!("found {:?}", value),
-    }
-
-    println!("And now we iterate");
-
-    let iter_finder = trianglefinder::IterTriangleFinder::new(finder);
-
-    for value in iter_finder {
-        println!("found {:?}", value)
-    }
-
-    let a: Vec<[f32; 3]> = vec![
-        [-0.36230828, -0.88712497, -0.28590558],
-        [-0.00418702, -0.98547485, -0.16976978],
-        [-0.3743498, -0.87157188, -0.31658281],
-    ];
-    let b: Vec<[f32; 3]> = vec![
-        [0.20531651, -0.0681248, 0.97632174],
-        [-0.16902335, 0.03930809, 0.98482789],
-        [0.2206221, -0.10030539, 0.97018798],
-    ];
-
-    println!("---");
-    let now2 = Instant::now();
-    let svd = star::attitude_svd(&a, &b);
-    println!("Time passed: {:?}\n", now2.elapsed());
-
-    match svd {
-        None => println!("not found"),
-        Some(value) => println!("found {:?}", value),
-    }
-
-    let vs = vec![
-        [1.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0],
-        [0.0, 0.0, 1.0],
-        [0.0, 0.0, -1.0],
-    ];
-    let l = tree::UnitVectorLookup::new(&vs);
-    let res = l.lookup_nearest(&[0.0, 0.0, -1.0]);
-    print!("look up result is {:?}", res);
-
-    println!("what");
-
     Ok(())
 }
 
@@ -158,15 +95,16 @@ impl StarMatcher {
         inter_star_angle_tolerance: f32,
         n_minimum_matches: usize,
         timeout_secs: f32,
-    ) -> Self {
-        StarMatcher {
-            inner: star::StarMatcher::new(
-                stars_xyz,
-                max_inter_star_angle,
-                inter_star_angle_tolerance,
-                n_minimum_matches,
-                timeout_secs,
-            ),
+    ) -> PyResult<Self> {
+        match star::StarMatcher::new(
+            stars_xyz,
+            max_inter_star_angle,
+            inter_star_angle_tolerance,
+            n_minimum_matches,
+            timeout_secs,
+        ) {
+            Ok(inner) => Ok(StarMatcher { inner }),
+            Err(e) => Err(PyRuntimeError::new_err(e)),
         }
     }
 
@@ -215,7 +153,15 @@ impl UnitVectorLookup {
         max_angle_rad: f32,
     ) -> PyResult<(Vec<[u32; 2]>, Vec<f32>, Vec<f32>)> {
         let now = Instant::now();
-        let res = star::get_inter_star_index(&self.inner, &vectors, max_angle_rad);
+        let res = match star::get_inter_star_index(&self.inner, &vectors, max_angle_rad) {
+            Ok(res) => res,
+            Err(s) => {
+                return Err(PyRuntimeError::new_err(format!(
+                    "Could not calculate inter star angle: {}",
+                    s
+                )))
+            }
+        };
         println!("Time passed: {:?}", now.elapsed());
         Ok(res)
     }
@@ -227,7 +173,15 @@ impl UnitVectorLookup {
     ) -> PyResult<(Vec<[u32; 2]>, Vec<f32>, Vec<f32>)> {
         let now = Instant::now();
         let vectors_inner = numpy_to_vec_3_32f(&vectors).unwrap();
-        let res = star::get_inter_star_index(&self.inner, vectors_inner, max_angle_rad);
+        let res = match star::get_inter_star_index(&self.inner, vectors_inner, max_angle_rad) {
+            Ok(res) => res,
+            Err(s) => {
+                return Err(PyRuntimeError::new_err(format!(
+                    "Could not calculate inter star angle: {}",
+                    s
+                )))
+            }
+        };
         println!("Time passed: {:?}", now.elapsed());
         Ok(res)
     }

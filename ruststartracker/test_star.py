@@ -53,8 +53,6 @@ def setup():
     img = np.zeros((size_y, size_x), np.uint8)
     for x, y in pixel_in_frame.astype(int):
         image_patch = img[y - 1 : y + 2, x - 1 : x + 2]
-        if image_patch.size == 0:
-            continue
         image_patch[:] = 50
 
     return img, vec, camera_params

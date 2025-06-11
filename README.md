@@ -3,12 +3,12 @@
 Based on the methodology used in https://github.com/nasa/COTS-Star-Tracker, with following improvements:
 - Reduced dependencies to opencv and numpy for lightweight usage in a Raspberry Pi.
 - Reimplemented computationally expensive parts in rust. This includes most parts that are not image processing related.
-- Added quadratic inter star angle index look up polynom for faster triangle search.
+- Added quadratic inter star angle index look up polynomial for faster triangle search.
 - Added spatial index to look up neighboring stars.
 
 Features:
 - Attitude estimation from image and camera calibration parameters.
-- Attitude estimation from list of star obvervation coordinates.
+- Attitude estimation from list of star observation coordinates.
 - Star catalog creation with temporal corrections.
 
 ## Example
