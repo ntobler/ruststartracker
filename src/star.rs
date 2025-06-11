@@ -225,10 +225,7 @@ impl StarMatcher {
         // Fit rotation matrix on triangle
         let rotm = match attitude_svd(&cat_triangle_xyz, &obs_triangle_xyz) {
             None => {
-                #[cfg(debug_assertions)]
-                {
-                    println!("1st Attitude svd failed");
-                }
+                // println!("1st Attitude svd failed");
                 return None;
             }
             Some(value) => value.cast::<f32>(),
@@ -261,20 +258,14 @@ impl StarMatcher {
 
         // Do not proceed if there are less than the minimum required amount of stars
         if selected_cat_xyz.len() < self.n_minimum_matches {
-            #[cfg(debug_assertions)]
-            {
-                println!("Less than {} close neighbors found", self.n_minimum_matches);
-            }
+            // println!("Less than {} close neighbors found", self.n_minimum_matches);
             return None;
         }
 
         // Fit rotation matrix on selected observations
         let rotm = match attitude_svd(&selected_cat_xyz, &selected_obs_xyz) {
             None => {
-                #[cfg(debug_assertions)]
-                {
-                    println!("2nd Attitude svd failed");
-                }
+                // println!("2nd Attitude svd failed");
                 return None;
             }
             Some(value) => value.cast::<f32>(),
@@ -310,20 +301,14 @@ impl StarMatcher {
 
         // Do not proceed if there are less than the minimum required amount of stars
         if selected_cat_xyz.len() < self.n_minimum_matches {
-            #[cfg(debug_assertions)]
-            {
-                println!("Less than {} close neighbors found", self.n_minimum_matches);
-            }
+            // println!("Less than {} close neighbors found", self.n_minimum_matches);
             return None;
         }
 
         // Fit rotation matrix on selected observations
         let final_rotm = match attitude_svd(&selected_cat_xyz, &selected_obs_xyz) {
             None => {
-                #[cfg(debug_assertions)]
-                {
-                    println!("3rd Attitude svd failed");
-                }
+                // println!("3rd Attitude svd failed");
                 return None;
             }
             Some(value) => value,
