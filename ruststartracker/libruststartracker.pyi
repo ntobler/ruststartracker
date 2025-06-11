@@ -3,8 +3,6 @@ from collections.abc import Iterator
 import numpy as np
 import numpy.typing as npt
 
-def main_scratch() -> None: ...
-
 class StarMatcher:
     def __init__(
         self,

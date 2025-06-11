@@ -11,3 +11,4 @@ __pycache__
 ruststartracker/libruststartracker.so
 
 .coverage
+coverage.xml
