@@ -5,6 +5,7 @@ use pyo3::{
 };
 use std::{time::Instant, usize};
 
+mod ordered_combinations;
 mod star;
 mod tree;
 mod trianglefinder;

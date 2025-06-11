@@ -160,7 +160,7 @@ impl StarMatcher {
 
     /// Iterator over combinations of stars forming triangles.
     fn triangle_combinations_iterator(&self, n: u32) -> impl Iterator<Item = [u32; 3]> {
-        itertools::Itertools::combinations(0..n, 3).map(|item| item.try_into().unwrap())
+        crate::ordered_combinations::OrderedCombinations::<3>::new(n)
     }
 
     /// Get star pairs that match given inter star angle.
