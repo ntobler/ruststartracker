@@ -165,7 +165,8 @@ class StarTracker:
                     "darkframe must be an uint8 array with shape "
                     f"{self._camera_params.cam_resolution}, matching the camera parameters"
                 )
-            cv2.subtract(img, darkframe, dst=img)  # also clips the image
+            # also clips the image
+            img = cv2.subtract(img, darkframe)  # type: ignore[assignment]
 
         if min_star_area >= max_star_area:
             raise ValueError("min_star_area must be less than max_star_area")
@@ -275,7 +276,7 @@ def _extract_observations(
     _, img_binary = cv2.threshold(img, threshold, 1, cv2.THRESH_BINARY)
 
     # find connected components (patches of star candidates)
-    _, _, stats, _ = cv2.connectedComponentsWithStats(img_binary, connectivity=8, ltype=cv2.CV_32S)
+    _, _, stats, _ = cv2.connectedComponentsWithStats(img_binary, connectivity=4, ltype=cv2.CV_32S)
     # The first item is the background patch, which needs to be skipped
     stats = stats[1:]
 
@@ -305,15 +306,15 @@ def _extract_observations(
             intensities[i] = 0
             continue
 
-        intensity_sum = roi.sum(dtype=np.uint32)
+        intensity_sum = roi.sum(dtype=np.uint32).item()
         intensities[i] = intensity_sum
 
         x_bar = (np.arange(left_pixel, right_pixel + 1, dtype=np.uint32) * roi.sum(axis=0)).sum(
             dtype=np.float32
-        ) / intensity_sum
+        ).item() / intensity_sum
         y_bar = (np.arange(top_pixel, bottom_pixel + 1, dtype=np.uint32) * roi.sum(axis=1)).sum(
             dtype=np.float32
-        ) / intensity_sum
+        ).item() / intensity_sum
         centers[i] = (x_bar, y_bar)
 
     # Only return centers with intensity
