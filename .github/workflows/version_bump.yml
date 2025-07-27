@@ -40,16 +40,15 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install bump-my-version
+      - name: Install dependencies
         run: |
-          pip install bump-my-version
+          pip install poetry
+          POETRY_VIRTUALENVS_CREATE=false poetry install
 
       - name: Bump version and push changes
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           bump-my-version bump ${{ steps.bump.outputs.bump_type }}
-          git add .
-          git commit -m "ci: bump ${{ steps.bump.outputs.bump_type }} version"
           git push
           git push --tags

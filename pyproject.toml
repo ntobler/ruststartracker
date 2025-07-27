@@ -40,6 +40,7 @@ current_version = "0.2.0"
 commit = true
 tag = true
 tag_name = "v{new_version}"
+commit_message = "ci: bump version to {new_version}"
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"
