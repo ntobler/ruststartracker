@@ -52,3 +52,14 @@ jobs:
           bump-my-version bump ${{ steps.bump.outputs.bump_type }}
           git push
           git push --tags
+
+      - name: Get current tag
+        id: get_tag
+        run: |
+          TAG=$(git describe --tags --abbrev=0)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Trigger Release Workflow
+        run: gh workflow run release.yml --ref ${{ steps.get_tag.outputs.tag }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
