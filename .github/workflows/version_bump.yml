@@ -1,0 +1,55 @@
+name: Bump Version After Merge
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+
+    if: "!contains(github.event.head_commit.message, 'ci: bump')"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Needed to see the previous commit
+
+      - name: Get bump type from PR title
+        id: bump
+        run: |
+          TITLE=$(git log -1 --pretty=%s)
+          echo "Commit title: $TITLE"
+
+          if [[ "$TITLE" =~ ^(patch|minor|major): ]]; then
+            TYPE=${BASH_REMATCH[1]}
+          else
+            TYPE="patch"  # default fallback
+          fi
+
+          echo "Bump type: $TYPE"
+          echo "bump_type=$TYPE" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install bump-my-version
+        run: |
+          pip install bump-my-version
+
+      - name: Bump version and push changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          bump-my-version bump ${{ steps.bump.outputs.bump_type }}
+          git add .
+          git commit -m "ci: bump ${{ steps.bump.outputs.bump_type }} version"
+          git push
+          git push --tags
