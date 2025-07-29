@@ -42,7 +42,7 @@ def download_gaia_data(output_file: pathlib.Path) -> None:
     print(f"Saved to: {output_file}")
 
 
-def rust_build() -> None:
+def build_script() -> None:
     """Build rust backend and move shared library to correct folder."""
     cwd = pathlib.Path(__file__).parent.expanduser().absolute()
 
@@ -57,4 +57,4 @@ def rust_build() -> None:
 
 
 if __name__ == "__main__":
-    rust_build()
+    build_script()
