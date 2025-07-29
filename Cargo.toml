@@ -1,10 +1,10 @@
 [package]
-name = "libruststartracker"
+name = "ruststartracker"
 version = "0.2.0"
 edition = "2021"
 
 [lib]
-name = "libruststartracker"
+name = "ruststartracker"
 crate-type = ["cdylib"]
 
 [dependencies]

@@ -1,4 +1,4 @@
-# Lightweight Python Start Tracker With Rust Backend
+# Lightweight Python Star Tracker With Rust Backend
 
 Based on the methodology used in https://github.com/nasa/COTS-Star-Tracker, with following improvements:
 - Reduced dependencies to opencv and numpy for lightweight usage in a Raspberry Pi.

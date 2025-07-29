@@ -28,8 +28,8 @@ jobs:
 
     - name: Install dependencies and create source distribution
       run: |
-        pip install maturin
-        maturin sdist
+        pip install poetry
+        poetry build --format sdist
 
     - name: Create Release
       id: create_release
@@ -44,7 +44,7 @@ jobs:
 
     - name: Upload sdist
       run: |
-        for file in ./target/wheels/*; do
+        for file in ./dist/*; do
           echo "Uploading $file..."
           gh release upload "${{ github.ref_name }}" "$file" --clobber
         done
@@ -75,12 +75,12 @@ jobs:
 
     - name: Install dependencies and build the wheel
       run: |
-        pip install maturin
-        maturin build --release
+        pip install poetry
+        poetry build --format wheel
 
     - name: Upload wheel
       run: |
-        for file in ./target/wheels/*; do
+        for file in ./dist/*; do
           echo "Uploading $file..."
           gh release upload "${{ github.ref_name }}" "$file" --clobber
         done

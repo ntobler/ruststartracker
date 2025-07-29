@@ -1,12 +1,13 @@
 [tool.poetry]
 name = "ruststartracker"
 version = "0.2.0"
-description = "Lightweight Python Start Tracker With Rust Backend"
+description = "Lightweight Python Star Tracker With Rust Backend"
 authors = ["Nicolas Tobler <nitobler@gmail.com>"]
 readme = "README.md"
 license = "MIT"
 include = [
     { path = "ruststartracker/star_catalog.tsv", format = ["sdist", "wheel"] },
+    { path = "ruststartracker/libruststartracker.so", format = ["wheel"] },
 ]
 
 [tool.poetry.dependencies]
@@ -25,15 +26,14 @@ astropy = "^6.1.4"
 mypy = "^1.13.0"
 scipy-stubs = "^1.14.1.5"
 ruff = "^0.9.3"
-maturin = "^1.4.0"
 bump-my-version = "^1.2.0"
 
-[tool.maturin]
-module-name = "ruststartracker.libruststartracker"
+[tool.poetry.build]
+script = "rust_build.py"
 
 [build-system]
-requires = ["maturin>=1.0,<2.0"]
-build-backend = "maturin"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.bumpversion]
 current_version = "0.2.0"
