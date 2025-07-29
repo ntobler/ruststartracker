@@ -28,7 +28,7 @@ def time_to_epoch(t: datetime.datetime) -> float:
 
 
 class StarCatalog:
-    """Star catalog from Hipparcos data."""
+    """Star catalog from Gaia data."""
 
     _data: npt.NDArray[np.float32]
     """Underlying data array."""
