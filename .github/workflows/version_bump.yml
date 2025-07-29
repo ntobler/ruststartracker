@@ -3,7 +3,7 @@ name: Bump Version After Merge
 on:
   push:
     branches:
-      - feature/github_release
+      - main
 
 permissions:
   contents: write
