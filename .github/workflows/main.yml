@@ -1,9 +1,15 @@
-name: Python CI/CD Pipeline
 
-on: [push, pull_request]
+name: Test develop CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - "**"  # All branches
+    tags-ignore:
+      - "**"  # Ignore all tags
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -31,3 +37,8 @@ jobs:
     - name: Run mypy
       run: |
         mypy
+
+    - name: Run cargo test
+      uses: actions-rs/cargo@v1
+      with:
+        command: test

@@ -2,12 +2,14 @@ Cargo.lock
 poetry.lock
 
 target/*
+dist/*
 .venv
 .pytest_cache
 .vscode
 
 __pycache__
 
+ruststartracker/libruststartracker.*.so
 ruststartracker/libruststartracker.so
 
 .coverage
