@@ -6,9 +6,14 @@ authors = ["Nicolas Tobler <nitobler@gmail.com>"]
 readme = "README.md"
 license = "MIT"
 include = [
-    { path = "ruststartracker/star_catalog.tsv", format = ["sdist", "wheel"] },
+    { path = "ruststartracker/gaia_data_j2016.csv", format = ["sdist", "wheel"] },
     { path = "ruststartracker/libruststartracker.so", format = ["wheel"] },
 ]
+
+[tool.poetry.urls]
+Homepage = "https://github.com/ntobler/ruststartracker"
+License = "https://opensource.org/licenses/MIT"
+GaiaAttribution = "https://www.cosmos.esa.int/gaia"
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -27,12 +32,13 @@ mypy = "^1.13.0"
 scipy-stubs = "^1.14.1.5"
 ruff = "^0.9.3"
 bump-my-version = "^1.2.0"
+astroquery = "^0.4.10"
 
 [tool.poetry.build]
-script = "rust_build.py"
+script = "build_script.py"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core", "astroquery>=0.4.10"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.bumpversion]

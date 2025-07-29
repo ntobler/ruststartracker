@@ -17,8 +17,8 @@ Features:
 import ruststartracker
 
 # Get catalog positions
-catalog = ruststartracker.StarCatalog()
-star_catalog_vecs = catalog.normalized_positions()
+catalog = ruststartracker.StarCatalog(max_magnitude=...)
+star_catalog_vecs = catalog.normalized_positions(epoch=...)
 
 # Define opencv camera parameters, see https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html
 camera_params = ruststartracker.CameraParameters(
@@ -34,6 +34,7 @@ st = ruststartracker.StarTracker(
     max_inter_star_angle=...,
     inter_star_angle_tolerance=...,
     n_minimum_matches=...,
+    timeout_secs=...,
 )
 
 # Obtain numpy array image
@@ -48,10 +49,21 @@ print(result)
 
 ## Installation
 
-- Make sure rust tool chain (`cargo`) is installed and in the `PATH` environment variable.
-- Install with `pip install git+https://github.com/ntobler/ruststartracker.git`.
+- Install with `pip install ruststartracker` (Currently only ARM/x86 Linux wheels available).
 
 ## TODOs
 
 - Improve error messages.
 - Return more diagnostic data.
+
+## Attributions
+
+### Gaia Data
+
+This project includes data from the European Space Agency (ESA) mission [**Gaia**](https://www.cosmos.esa.int/gaia), processed by the **Gaia Data Processing and Analysis Consortium (DPAC)**.
+Funding for the DPAC has been provided by national institutions, in particular the institutions participating in the Gaia Multilateral Agreement.
+
+Gaia DR3 data is © European Space Agency and is released under the [**Creative Commons Attribution 4.0 International License (CC BY 4.0)**](https://creativecommons.org/licenses/by/4.0/).
+
+> Gaia Collaboration, Vallenari et al. (2022), *A\&A* **674**, A1.
+> [DOI: 10.1051/0004-6361/202243940](https://doi.org/10.1051/0004-6361/202243940)

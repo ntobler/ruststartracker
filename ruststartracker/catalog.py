@@ -11,7 +11,9 @@ import numpy.typing as npt
 AU: float = 149597870.693
 """Astronomical unit."""
 
-INTERNAL_CATALOG_FILE = pathlib.Path(__file__).parent.expanduser().absolute() / "star_catalog.tsv"
+INTERNAL_CATALOG_FILE = (
+    pathlib.Path(__file__).parent.expanduser().absolute() / "gaia_data_j2016.csv"
+)
 """Location of the internal star catalog file."""
 
 
@@ -26,7 +28,7 @@ def time_to_epoch(t: datetime.datetime) -> float:
 
 
 class StarCatalog:
-    """Star catalog from Hipparcos data."""
+    """Star catalog from Gaia data."""
 
     _data: npt.NDArray[np.float32]
     """Underlying data array."""
@@ -42,7 +44,7 @@ class StarCatalog:
     """Proper motion of the declination in mad."""
     magnitude: npt.NDArray[np.float32]
     """Magnitude values."""
-    epoch: float = 1992.25
+    epoch: float = 2016.0
     """Epoch of the catalog in years."""
 
     def __init__(
@@ -57,13 +59,10 @@ class StarCatalog:
         # Use locally included star catalog is no file is given
         filename = INTERNAL_CATALOG_FILE if filename is None else pathlib.Path(filename)
 
-        keep_columns = ("RArad", "DErad", "Plx", "pmRA", "pmDE", "Hpmag")
+        keep_columns = ("ra", "dec", "parallax", "pmra", "pmdec", "phot_g_mean_mag")
 
         with filename.open("r") as f:
-            it = csv.reader(f, delimiter="\t", strict=True)
-
-            # skip head
-            [next(it) for _ in range(52)]
+            it = csv.reader(f, delimiter=",", strict=True)
 
             # Get columns
             columns = next(it)
@@ -71,10 +70,7 @@ class StarCatalog:
             keep_columns_indices = tuple(columns.index(x) for x in keep_columns)
             min_length = len(keep_columns_indices)
 
-            mag_column_index = columns.index("Hpmag")
-
-            # Skip unit and horizontal bar
-            [next(it) for _ in range(2)]
+            mag_column_index = columns.index("phot_g_mean_mag")
 
             rows = [
                 [float(line[j]) for j in keep_columns_indices]
@@ -83,12 +79,12 @@ class StarCatalog:
             ]
         self._data = np.array(rows, dtype=np.float32)
 
-        self.ra = self._data[:, keep_columns.index("RArad")]
-        self.de = self._data[:, keep_columns.index("DErad")]
-        self.parallax = self._data[:, keep_columns.index("Plx")]
-        self.proper_motion_ra = self._data[:, keep_columns.index("pmRA")]
-        self.proper_motion_de = self._data[:, keep_columns.index("pmDE")]
-        self.magnitude = self._data[:, keep_columns.index("Hpmag")]
+        self.ra = self._data[:, keep_columns.index("ra")]
+        self.de = self._data[:, keep_columns.index("dec")]
+        self.parallax = self._data[:, keep_columns.index("parallax")]
+        self.proper_motion_ra = self._data[:, keep_columns.index("pmra")]
+        self.proper_motion_de = self._data[:, keep_columns.index("pmdec")]
+        self.magnitude = self._data[:, keep_columns.index("phot_g_mean_mag")]
 
         deg2rad = math.pi / 180
         arcsec2deg = 1 / 3600
