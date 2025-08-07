@@ -4,18 +4,20 @@ pub struct OrderedCombinations<const K: usize> {
 }
 
 impl<const K: usize> OrderedCombinations<K> {
-    pub fn new(n: u32) -> Self {
-        assert!(n >= K as u32, "n must be at least K");
+    pub fn new(n: u32) -> Result<Self, &'static str> {
+        if n < K as u32 {
+            return Err("n must be at least K");
+        }
 
         let mut initial = [0u32; K];
         for i in 0..K {
             initial[i] = i as u32;
         }
 
-        Self {
+        Ok(Self {
             n,
             indices: Some(initial),
-        }
+        })
     }
 }
 
@@ -83,7 +85,7 @@ mod tests {
     #[test]
     fn test_combination_order_sfa_3_5() {
         let n = 5;
-        let iter = OrderedCombinations::<3>::new(n);
+        let iter = OrderedCombinations::<3>::new(n).unwrap();
         let v: Vec<[u32; 3]> = iter.take(11).collect();
 
         assert_eq!(v[0], [0, 1, 2]);
@@ -102,7 +104,7 @@ mod tests {
     #[test]
     fn test_combination_order_3_6() {
         let n = 6;
-        let iter = OrderedCombinations::<3>::new(n);
+        let iter = OrderedCombinations::<3>::new(n).unwrap();
         let v: Vec<[u32; 3]> = iter.take(21).collect();
 
         assert_eq!(v[0], [0, 1, 2]);
@@ -131,7 +133,7 @@ mod tests {
     #[test]
     fn test_combination_order_4_5() {
         let n = 5;
-        let iter = OrderedCombinations::<4>::new(n);
+        let iter = OrderedCombinations::<4>::new(n).unwrap();
         let v: Vec<[u32; 4]> = iter.take(12).collect();
 
         assert_eq!(v[0], [0, 1, 2, 3]);
@@ -145,8 +147,8 @@ mod tests {
     #[test]
     fn test_combination_order_4_6() {
         let n = 6;
-        let iter = OrderedCombinations::<4>::new(n);
-        let v: Vec<[u32; 4]> = iter.take(16).collect();
+        let iter = OrderedCombinations::<4>::new(n).unwrap();
+        let v: Vec<[u32; 4]> = iter.collect();
 
         assert_eq!(v[0], [0, 1, 2, 3]);
         assert_eq!(v[1], [0, 1, 2, 4]);
@@ -164,5 +166,18 @@ mod tests {
         assert_eq!(v[13], [1, 3, 4, 5]);
         assert_eq!(v[14], [2, 3, 4, 5]);
         assert_eq!(v.len(), 15);
+    }
+
+    #[test]
+    fn test_combination_order_3_3() {
+        let iter = OrderedCombinations::<3>::new(3).unwrap();
+        let v: Vec<[u32; 3]> = iter.collect();
+        assert_eq!(v[0], [0, 1, 2]);
+        assert_eq!(v.len(), 1);
+    }
+
+    #[test]
+    fn test_combination_order_3_2() {
+        assert!(OrderedCombinations::<3>::new(2).is_err());
     }
 }

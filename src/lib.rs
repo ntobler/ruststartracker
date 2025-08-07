@@ -1,12 +1,18 @@
-use numpy::{self, PyUntypedArrayMethods};
+use numpy::{self, PyArrayMethods, PyUntypedArrayMethods, ToPyArray};
+use pyo3::prelude::*;
+use pyo3::types::PyAny;
 use pyo3::{
-    exceptions::PyRuntimeError, pyclass, pymethods, pymodule, types::PyModule, Bound, PyRef,
-    PyRefMut, PyResult,
+    exceptions::PyRuntimeError, pyclass, pymethods, pymodule, types::PyModule, types::PyType,
+    Bound, PyRef, PyRefMut, PyResult,
 };
+use std::path::PathBuf;
 use std::{time::Instant, usize};
 
 mod ordered_combinations;
-mod star;
+pub mod star;
+pub mod starcat;
+#[cfg(feature = "improc")]
+pub mod starextraction;
 mod tree;
 mod trianglefinder;
 mod util;
@@ -17,6 +23,11 @@ fn libruststartracker(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<IterTriangleFinder>()?;
     m.add_class::<StarMatcher>()?;
     m.add_class::<UnitVectorLookup>()?;
+    m.add_class::<StarCatalog>()?;
+    #[cfg(feature = "improc")]
+    m.add_function(wrap_pyfunction!(get_threshold_from_histogram, m)?)?;
+    #[cfg(feature = "improc")]
+    m.add_function(wrap_pyfunction!(extract_observations, m)?)?;
     Ok(())
 }
 
@@ -113,10 +124,10 @@ impl StarMatcher {
         obs_xyz: Vec<[f32; 3]>,
     ) -> PyResult<([f32; 4], Vec<u32>, Vec<u32>, u32, Vec<[f32; 3]>, f32)> {
         let now = Instant::now();
-        let res = self.inner.find(obs_xyz);
+        let res = self.inner.find(&obs_xyz);
         let duration_s = now.elapsed().as_secs_f32();
         match res {
-            Err(x) => Err(PyRuntimeError::new_err(x)),
+            Err(x) => Err(PyRuntimeError::new_err(x.to_string())),
             Ok(x) => Ok((
                 x.quat,
                 x.match_ids,
@@ -151,7 +162,7 @@ impl UnitVectorLookup {
         &self,
         vectors: Vec<[f32; 3]>,
         max_angle_rad: f32,
-    ) -> PyResult<(Vec<[u32; 2]>, Vec<f32>, Vec<f32>)> {
+    ) -> PyResult<(Vec<[u32; 2]>, Vec<f32>, [f32; 3])> {
         let now = Instant::now();
         let res = match star::get_inter_star_index(&self.inner, &vectors, max_angle_rad) {
             Ok(res) => res,
@@ -170,7 +181,7 @@ impl UnitVectorLookup {
         &self,
         vectors: numpy::PyReadonlyArray2<'py, f32>,
         max_angle_rad: f32,
-    ) -> PyResult<(Vec<[u32; 2]>, Vec<f32>, Vec<f32>)> {
+    ) -> PyResult<(Vec<[u32; 2]>, Vec<f32>, [f32; 3])> {
         let now = Instant::now();
         let vectors_inner = numpy_to_vec_3_32f(&vectors).unwrap();
         let res = match star::get_inter_star_index(&self.inner, vectors_inner, max_angle_rad) {
@@ -209,9 +220,105 @@ impl UnitVectorLookup {
     }
 }
 
+#[pyclass]
+struct StarCatalog {
+    inner: starcat::StarCatalog,
+}
+
+#[pymethods]
+impl StarCatalog {
+    #[new]
+    fn new(filename: Bound<'_, PyAny>, epoch: f64, max_magnitude: Option<f64>) -> PyResult<Self> {
+        let path: PathBuf = filename.extract()?;
+        Ok(StarCatalog {
+            inner: starcat::StarCatalog::new_from_file(path, epoch, max_magnitude)
+                .map_err(PyRuntimeError::new_err)?,
+        })
+    }
+
+    #[cfg(feature = "gaia")]
+    #[classmethod]
+    fn from_gaia(_cls: &Bound<'_, PyType>, max_magnitude: Option<f64>) -> PyResult<Self> {
+        Ok(StarCatalog {
+            inner: starcat::StarCatalog::new_from_gaia(max_magnitude)
+                .map_err(PyRuntimeError::new_err)?,
+        })
+    }
+
+    pub fn normalized_positions(
+        &self,
+        epoch: Option<f64>,
+        observer_position: Option<[f64; 3]>,
+    ) -> Vec<[f64; 3]> {
+        self.inner.normalized_positions(epoch, observer_position)
+    }
+}
+
+#[cfg(feature = "improc")]
+#[pyfunction]
+pub fn get_threshold_from_histogram<'py>(
+    img: numpy::PyReadonlyArray2<'py, u8>,
+    fraction: f64,
+) -> PyResult<u8> {
+    if !img.is_c_contiguous() {
+        return Err(PyRuntimeError::new_err("Image must be a c_contiguous"));
+    }
+    Ok(starextraction::get_threshold_from_histogram(
+        img.as_slice()?,
+        fraction,
+    ))
+}
+
+#[cfg(feature = "improc")]
+#[pyfunction]
+pub fn extract_observations<'py>(
+    py: Python<'py>,
+    img: numpy::PyReadonlyArray2<'py, u8>,
+    threshold_value: u8,
+    min_area: usize,
+    max_area: usize,
+) -> PyResult<(
+    Bound<'py, numpy::PyArray2<f64>>,
+    Bound<'py, numpy::PyArray1<f64>>,
+)> {
+    if !img.is_c_contiguous() || img.ndim() != 2 {
+        return Err(PyRuntimeError::new_err(
+            "Image must be a c_contiguous 2D array",
+        ));
+    }
+    let (centroids, intensities) = starextraction::extract_observations(
+        img.as_slice()?,
+        (img.shape()[1], img.shape()[0]),
+        threshold_value,
+        min_area,
+        max_area,
+    )
+    .map_err(|e| PyRuntimeError::new_err(e))?;
+
+    let centroids_np = create_2d_numpy_array(py, &centroids);
+    let intensities_np = intensities.as_slice().to_pyarray_bound(py);
+
+    Ok((centroids_np, intensities_np))
+}
+
+fn create_2d_numpy_array<'py, const N: usize, T>(
+    py: Python<'py>,
+    points: &[[T; N]],
+) -> Bound<'py, numpy::PyArray2<T>>
+where
+    T: numpy::Element,
+{
+    let len = points.len(); // n
+    let ptr = points.as_ptr() as *const T;
+    let total_len = len * N;
+    let contiguous_slice = unsafe { std::slice::from_raw_parts(ptr, total_len) };
+    let flat_np = contiguous_slice.to_pyarray_bound(py);
+    flat_np.reshape((len, N)).unwrap() // Save to unwrap as we know the shape is correct
+}
+
 fn numpy_to_vec_3_32f<'py, const L: usize>(
     vectors: &'py numpy::PyReadonlyArray2<'py, f32>,
-) -> PyResult<&[[f32; L]]> {
+) -> PyResult<&'py [[f32; L]]> {
     if !vectors.is_c_contiguous() || vectors.ndim() != 2 || vectors.shape()[1] != L {
         return Err(PyRuntimeError::new_err(format!(
             "vectors must be a c_contiguous array with shape=[n, {}]",

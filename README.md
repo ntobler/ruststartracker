@@ -13,6 +13,28 @@ Features:
 
 ## Example
 
+### Rust
+```rust
+// Get catalog positions
+let catalog: StarCatalog = StarCatalog::from_gaia(max_magnitude: ...).unwrap();
+let stars_xyz: Vec<[f32; 3]> = catalog.normalized_positions(epoch: ..., observer_position: ...);
+
+// Create StarTracker instance (reuse this)
+let star_matcher = StarMatcher::new(
+    stars_xyz,
+    max_inter_star_angle: ...,
+    inter_star_angle_tolerance: ...,
+    min_matches: ...,
+    timeout: ...
+)
+
+// Normalized observation in the camera frame
+let obs_xyz_camera: Vec<[f32; 3]> = ...
+
+let result = self.star_matcher.find(&obs_xyz_camera)
+```
+
+### Python
 ```python
 import ruststartracker
 
@@ -50,11 +72,6 @@ print(result)
 ## Installation
 
 - Install with `pip install ruststartracker` (Currently only ARM/x86 Linux wheels available).
-
-## TODOs
-
-- Improve error messages.
-- Return more diagnostic data.
 
 ## Attributions
 

@@ -178,6 +178,20 @@ class StarTracker:
             max_star_area=max_star_area,
         )
 
+        if threshold is None:
+            threshold = ruststartracker.libruststartracker.get_threshold_from_histogram(
+                img, fraction=0.99
+            )
+
+        centroids, intensities = ruststartracker.libruststartracker.extract_observations(
+            img,
+            threshold,
+            min_star_area,
+            max_star_area,
+        )
+        centroids = np.array(centroids, dtype=np.float32)
+        intensities = np.array(intensities, dtype=np.float32)
+
         # At least 3 observations are required (one triangle)
         if len(centroids) < 3:
             raise StarTrackerError("Found too few star candidates (< 3) to continue.")

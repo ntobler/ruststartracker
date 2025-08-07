@@ -2,6 +2,7 @@ from collections.abc import Iterator
 
 import numpy as np
 import numpy.typing as npt
+from typing_extensions import Self
 
 class StarMatcher:
     def __init__(
@@ -56,3 +57,22 @@ class UnitVectorLookup:
     def look_up_close_angles_naive(
         self, vectors: npt.NDArray[np.float32], max_angle_rad: float
     ) -> list[tuple[list[float], float]]: ...
+
+def get_threshold_from_histogram(
+    img: npt.NDArray[np.uint8],
+    *,
+    fraction: float,
+) -> int: ...
+def extract_observations(
+    img: npt.NDArray[np.uint8],
+    threshold: int,
+    min_star_area: int,
+    max_star_area: int,
+) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.float32]]: ...
+
+class StarCatalog:
+    @classmethod
+    def from_gaia(cls, *, max_magnitude: float | None) -> Self: ...
+    def normalized_positions(
+        self, *, epoch: float | None, observer_position: np.ndarray | None
+    ) -> npt.NDArray[np.float32]: ...

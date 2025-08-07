@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::tree;
 use crate::trianglefinder;
 use std::time::Instant;
@@ -12,7 +14,7 @@ pub struct StarMatcher {
     /// tolerance of inter star angle in rad
     inter_star_angle_tolerance: f32,
     // polynomial with terms [c0, c1, c2, ..] (c0 + x c1 + x^2 c2)
-    inter_star_index_polynomial: Vec<f32>,
+    inter_star_index_polynomial: [f32; 3],
     max_inter_star_angle: f32,
     n_minimum_matches: usize,
     timeout_secs: f32,
@@ -54,7 +56,7 @@ pub fn get_inter_star_index(
     star_index: &tree::UnitVectorLookup,
     stars_xyz: &[[f32; 3]],
     max_angle_rad: f32,
-) -> Result<(Vec<[u32; 2]>, Vec<f32>, Vec<f32>), &'static str> {
+) -> Result<(Vec<[u32; 2]>, Vec<f32>, [f32; 3]), &'static str> {
     let mut index_pairs = star_index.look_up_close_angles(stars_xyz, max_angle_rad);
 
     if index_pairs.is_empty() {
@@ -67,7 +69,9 @@ pub fn get_inter_star_index(
     let indices: Vec<f32> = (0..angles.len()).map(|i| i as f32).collect();
 
     // polynomial with terms [c0, c1, c2, ..] (c0 + x c1 + x^2 c2)
-    let mut polynomial = polyfit_rs::polyfit_rs::polyfit(&angles, &indices, 2)?;
+    let mut polynomial: [f32; 3] = polyfit_rs::polyfit_rs::polyfit(&angles, &indices, 2)?
+        .try_into()
+        .map_err(|_| "Failed to convert polynomial coefficients")?;
 
     let errors: Vec<f32> = angles
         .iter()
@@ -83,6 +87,52 @@ pub fn get_inter_star_index(
     let pairs = index_pairs.iter().map(|x| x.0).collect();
 
     Ok((pairs, angles, polynomial))
+}
+
+pub struct MatchResult {
+    pub quat: [f32; 4],
+    pub match_ids: Vec<u32>,
+    pub n_matches: u32,
+    pub obs_matched: Vec<[f32; 3]>,
+    pub obs_indices: Vec<u32>,
+}
+
+#[derive(Debug)]
+pub enum FailureReason {
+    Unspecified,
+    Timeout,
+    NotEnoughStars,
+    SearchExhausted,
+}
+
+#[derive(Debug)]
+pub struct DiagnosticData {
+    pub reason: FailureReason,
+    pub first_svd_failures: usize,
+    pub second_svd_failures: usize,
+    pub third_svd_failures: usize,
+    pub max_first_matches: usize,
+    pub max_refined_matches: usize,
+}
+
+impl DiagnosticData {
+    pub fn new() -> Self {
+        DiagnosticData {
+            reason: FailureReason::Unspecified,
+            first_svd_failures: 0,
+            second_svd_failures: 0,
+            third_svd_failures: 0,
+            max_first_matches: 0,
+            max_refined_matches: 0,
+        }
+    }
+}
+
+impl fmt::Display for DiagnosticData {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Delegate to Debug
+        write!(f, "{:?}", self)
+    }
 }
 
 impl StarMatcher {
@@ -114,10 +164,20 @@ impl StarMatcher {
         })
     }
 
-    pub fn find(&self, obs_xyz: Vec<[f32; 3]>) -> Result<MatchResult, &'static str> {
+    pub fn find(&self, obs_xyz: &[[f32; 3]]) -> Result<MatchResult, DiagnosticData> {
         let start_instant = Instant::now();
 
-        for obs_indices in self.triangle_combinations_iterator(obs_xyz.len() as u32) {
+        let mut diagnostic_data = DiagnosticData::new();
+
+        let iter = match self.triangle_combinations_iterator(obs_xyz.len() as u32) {
+            Ok(x) => x,
+            Err(_) => {
+                diagnostic_data.reason = FailureReason::NotEnoughStars;
+                return Err(diagnostic_data);
+            }
+        };
+
+        for obs_indices in iter {
             let [a, b, c] = obs_indices;
 
             // Get positions of the 3 observations
@@ -152,21 +212,26 @@ impl StarMatcher {
 
             // Iterate over possible matching triangles
             for value in iter_finder {
-                match self.check(&obs_indices, &obs_xyz, &value) {
+                match self.check(&obs_indices, &obs_xyz, &value, &mut diagnostic_data) {
                     None => {}
                     Some(x) => return Ok(x),
                 };
             }
 
             if start_instant.elapsed().as_secs_f32() > self.timeout_secs {
-                return Err("Timeout reached");
+                diagnostic_data.reason = FailureReason::Timeout;
+                return Err(diagnostic_data);
             }
         }
-        Err("Search exhausted")
+        diagnostic_data.reason = FailureReason::SearchExhausted;
+        Err(diagnostic_data)
     }
 
     /// Iterator over combinations of stars forming triangles.
-    fn triangle_combinations_iterator(&self, n: u32) -> impl Iterator<Item = [u32; 3]> {
+    fn triangle_combinations_iterator(
+        &self,
+        n: u32,
+    ) -> Result<impl Iterator<Item = [u32; 3]>, &'static str> {
         crate::ordered_combinations::OrderedCombinations::<3>::new(n)
     }
 
@@ -207,6 +272,7 @@ impl StarMatcher {
         obs_indices: &[u32; 3],
         obs_xyz: &[[f32; 3]],
         cat_indices: &[u32; 3],
+        diagnostic_data: &mut DiagnosticData,
     ) -> Option<MatchResult> {
         // Get vectors of observed triangle
         let obs_triangle_xyz = [
@@ -225,7 +291,7 @@ impl StarMatcher {
         // Fit rotation matrix on triangle
         let rotm = match attitude_svd(&cat_triangle_xyz, &obs_triangle_xyz) {
             None => {
-                // println!("1st Attitude svd failed");
+                diagnostic_data.first_svd_failures += 1;
                 return None;
             }
             Some(value) => value.cast::<f32>(),
@@ -258,14 +324,15 @@ impl StarMatcher {
 
         // Do not proceed if there are less than the minimum required amount of stars
         if selected_cat_xyz.len() < self.n_minimum_matches {
-            // println!("Less than {} close neighbors found", self.n_minimum_matches);
+            diagnostic_data.max_first_matches =
+                usize::max(diagnostic_data.max_first_matches, selected_cat_xyz.len());
             return None;
         }
 
         // Fit rotation matrix on selected observations
         let rotm = match attitude_svd(&selected_cat_xyz, &selected_obs_xyz) {
             None => {
-                // println!("2nd Attitude svd failed");
+                diagnostic_data.second_svd_failures += 1;
                 return None;
             }
             Some(value) => value.cast::<f32>(),
@@ -301,14 +368,15 @@ impl StarMatcher {
 
         // Do not proceed if there are less than the minimum required amount of stars
         if selected_cat_xyz.len() < self.n_minimum_matches {
-            // println!("Less than {} close neighbors found", self.n_minimum_matches);
+            diagnostic_data.max_refined_matches =
+                usize::max(diagnostic_data.max_refined_matches, selected_cat_xyz.len());
             return None;
         }
 
         // Fit rotation matrix on selected observations
         let final_rotm = match attitude_svd(&selected_cat_xyz, &selected_obs_xyz) {
             None => {
-                // println!("3rd Attitude svd failed");
+                diagnostic_data.third_svd_failures += 1;
                 return None;
             }
             Some(value) => value,
@@ -328,14 +396,10 @@ impl StarMatcher {
             obs_indices: selected_obs_indices,
         })
     }
-}
 
-pub struct MatchResult {
-    pub quat: [f32; 4],
-    pub match_ids: Vec<u32>,
-    pub n_matches: u32,
-    pub obs_matched: Vec<[f32; 3]>,
-    pub obs_indices: Vec<u32>,
+    pub fn stars_xyz(&self) -> &[[f32; 3]] {
+        &self.stars_xyz
+    }
 }
 
 /// Solve Wahba's problem using SVD method.

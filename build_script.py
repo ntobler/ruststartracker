@@ -50,7 +50,7 @@ def build_script() -> None:
     if not gaia_file.exists():
         download_gaia_data(gaia_file)
 
-    subprocess.check_call(["cargo", "build", "--release"], cwd=cwd)  # noqa: S603, S607
+    subprocess.check_call(["cargo", "build", "--release", "--features", "improc,gaia"], cwd=cwd)  # noqa: S603, S607
     shutil.copy(
         cwd / "target/release/libruststartracker.so", cwd / "ruststartracker/libruststartracker.so"
     )
