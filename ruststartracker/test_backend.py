@@ -54,9 +54,12 @@ def test_unit_vector_lookup():
     close_indices_gt = np.concatenate(results, axis=-1).T[args]
     angles_gt = angles[args]
 
-    close_indices, angles, poly = uvl.get_inter_star_index_numpy(vec, angle_threshold)
-
-    close_indices, angles, poly = uvl.get_inter_star_index(vec[:, :3], angle_threshold)
+    close_indices, angles, poly = uvl.get_inter_star_index(
+        np.array(vec[:, :3], dtype=np.float32),
+        np.ones(len(vec), dtype=np.float32),
+        angle_threshold,
+        10,
+    )
     close_indices = np.array(close_indices)
     angles = np.array(angles)
     poly = np.array(poly)
@@ -101,6 +104,8 @@ def test_star_matcher():
     vec = rng.normal(size=[n_cat_stars, 3]).astype(np.float32)
     vec /= np.linalg.norm(vec, axis=-1, keepdims=True)
 
+    magnitudes = rng.uniform(0, 10, size=vec.shape[:1]).astype(np.float32)
+
     key = rng.normal(size=[3]).astype(np.float32)
     key /= np.linalg.norm(key, axis=-1, keepdims=True)
 
@@ -113,10 +118,16 @@ def test_star_matcher():
 
     rot = scipy.spatial.transform.Rotation.from_rotvec([1, 1, 1])
 
-    obs_rotated = rot.apply(obs)
+    obs_rotated = rot.apply(obs).astype(np.float32)
 
     index = libruststartracker.StarMatcher(
-        vec, np.radians(10).item(), np.radians(0.1).item(), 4, 999.0
+        vec,
+        magnitudes,
+        10,
+        np.radians(10).item(),
+        np.radians(0.1).item(),
+        4,
+        999.0,
     )
 
     res = index.find(obs_rotated)
@@ -124,7 +135,7 @@ def test_star_matcher():
     assert res is not None
 
     quat, match_ids, obs_indices, n_matches, matched_obs, time_s = res
-    np.testing.assert_allclose(quat, rot.inv().as_quat())
+    np.testing.assert_allclose(quat, rot.inv().as_quat(), rtol=1e-6)
     assert n_matches >= 4
     assert len(obs_index) == len(match_ids)
 

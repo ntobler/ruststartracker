@@ -10,21 +10,29 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libclang-dev libopencv-dev
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
+    # poetry==2.1.4 has a bug
     - name: Install dependencies
       run: |
-        pip install poetry
-        POETRY_VIRTUALENVS_CREATE=false poetry install
+        pip install poetry==2.1.3
+        poetry install
+      env:
+        POETRY_VIRTUALENVS_CREATE: false
 
     - name: Pre-commit checks
       run: |
@@ -42,3 +50,4 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: test
+        args: --features=improc,gaia

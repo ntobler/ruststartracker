@@ -1,10 +1,12 @@
 import datetime
+import time
 
 import astropy.time  # type: ignore[import]
 import numpy as np
 import pytest
 
 import ruststartracker.catalog
+import ruststartracker.libruststartracker
 
 
 def test_time_to_epoch():
@@ -41,6 +43,18 @@ def test_extract_observations():
     assert positions.ndim == 2
     assert positions.shape[1] == 3
     np.testing.assert_allclose(np.linalg.norm(positions, axis=-1), 1.0, rtol=1e-5)
+
+
+def test_python_rust():
+    t0 = time.monotonic()
+    positions = ruststartracker.catalog.StarCatalog().normalized_positions(epoch=2025.0)
+    print(f"Python catalog took {time.monotonic() - t0:.3f} seconds")
+    t0 = time.monotonic()
+    positions2 = ruststartracker.libruststartracker.StarCatalog.from_gaia(
+        max_magnitude=6.0
+    ).normalized_positions(epoch=2025.0, observer_position=None)
+    print(f"Rust catalog took {time.monotonic() - t0:.3f} seconds")
+    np.testing.assert_allclose(positions, positions2, rtol=1e-5, atol=1e-5)
 
 
 if __name__ == "__main__":

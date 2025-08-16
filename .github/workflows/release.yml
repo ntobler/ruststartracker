@@ -14,22 +14,12 @@ jobs:
 
   make-release:
     name: Create Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
 
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-
-    - name: Install dependencies and create source distribution
-      run: |
-        pip install poetry
-        poetry build --format sdist
 
     - name: Create Release
       id: create_release
@@ -41,6 +31,36 @@ jobs:
         release_name: Release ${{ github.ref_name }}
         draft: false
         prerelease: false
+
+  build-python-sdist:
+    name: Build Python sdist
+    runs-on: ubuntu-22.04
+
+    needs:
+        - make-release
+
+    steps:
+
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libclang-dev libopencv-dev
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    # poetry==2.1.4 has a bug
+    - name: Install dependencies and create source distribution
+      run: |
+        pip install poetry==2.1.3
+        poetry build --format sdist
+      env:
+        POETRY_VIRTUALENVS_CREATE: false
 
     - name: Upload sdist
       run: |
@@ -68,15 +88,23 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libclang-dev libopencv-dev
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
+    # poetry==2.1.4 has a bug
     - name: Install dependencies and build the wheel
       run: |
-        pip install poetry
+        pip install poetry==2.1.3
         poetry build --format wheel
+      env:
+        POETRY_VIRTUALENVS_CREATE: false
 
     - name: Upload wheel
       run: |
@@ -90,7 +118,7 @@ jobs:
 
   pypi-publish:
     name: Upload release to PyPI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     environment:
       name: pypi
@@ -104,6 +132,7 @@ jobs:
 
     needs:
         - build-python-wheels
+        - build-python-sdist
 
     steps:
 
