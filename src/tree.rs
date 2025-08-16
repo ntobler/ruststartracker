@@ -21,6 +21,7 @@ impl UnitVectorLookup {
     }
 
     pub fn lookup_nearest(&self, vector: &[f32; 3]) -> usize {
+        // kdtree.nearest is equally fast as kdtree.iter_nearest
         let res = self.kdtree.nearest(vector, 1, &squared_euclidean).unwrap();
         *(res[0].1)
     }
@@ -28,14 +29,21 @@ impl UnitVectorLookup {
     pub fn look_up_close_angles(
         &self,
         vectors: &[[f32; 3]],
+        magnitudes: &[f32],
         max_angle_rad: f32,
+        max_magnitude: f32,
     ) -> Vec<([u32; 2], f32)> {
         let threshold = maths_rs::cos(max_angle_rad);
         let mut index_pairs = Vec::new();
         for a in 0..vectors.len() {
+            if magnitudes[a] > max_magnitude {
+                continue;
+            }
             let vec_a = &vectors[a];
-
             for (_, b) in self.kdtree.iter_nearest(vec_a, &squared_euclidean).unwrap() {
+                if magnitudes[*b] > max_magnitude {
+                    continue;
+                }
                 let vec_b = &vectors[*b];
                 let dotp = dot_product(vec_a, vec_b);
                 if dotp < threshold {
@@ -49,5 +57,34 @@ impl UnitVectorLookup {
             }
         }
         index_pairs
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use rand::rng;
+    use rand_distr::{Distribution, Normal};
+
+    use super::*;
+
+    #[test]
+    fn test_tree() {
+        let mut rng = rng();
+        let normal = Normal::new(0.0, 1.0).unwrap(); // mean = 0, std dev = 1
+
+        let samples: Vec<[f32; 3]> = (0..100)
+            .map(|_| {
+                let x = normal.sample(&mut rng) as f32;
+                let y = normal.sample(&mut rng) as f32;
+                let z = normal.sample(&mut rng) as f32;
+                let mag = f32::sqrt(x * x + y * y + z * z);
+                [x / mag, y / mag, z / mag]
+            })
+            .collect();
+
+        let lookup = UnitVectorLookup::new(&samples);
+
+        assert!(lookup.lookup_nearest(&samples[0]) == 0);
     }
 }

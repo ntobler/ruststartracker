@@ -8,7 +8,9 @@ class StarMatcher:
     def __init__(
         self,
         stars_xyz: npt.NDArray[np.float32],
+        stars_mag: npt.NDArray[np.float32],
         max_inter_star_angle: float,
+        max_lookup_magnitude: float,
         inter_star_angle_tolerance: float,
         n_minimum_matches: int,
         timeout_secs: float,
@@ -20,7 +22,7 @@ class StarMatcher:
         npt.NDArray[np.uint32],
         npt.NDArray[np.uint32],
         int,
-        list[list[float]],
+        npt.NDArray[np.float32],
         float,
     ]: ...
 
@@ -45,17 +47,26 @@ class IterTriangleFinder:
 class UnitVectorLookup:
     def __init__(self, vec: npt.NDArray[np.float32]) -> None: ...
     def lookup_nearest(self, key: npt.NDArray[np.float32]) -> int: ...
-    def get_inter_star_index_numpy(
-        self, vec: npt.NDArray[np.float32], angle_threshold: float
-    ) -> tuple[list[list[int]], list[float], list[float]]: ...
     def get_inter_star_index(
-        self, vec: npt.NDArray[np.float32], angle_threshold: float
+        self,
+        stars: npt.NDArray[np.float32],
+        magnitudes: npt.NDArray[np.float32],
+        max_angle_rad: float,
+        max_magnitude: float,
     ) -> tuple[list[list[int]], list[float], list[float]]: ...
     def look_up_close_angles(
-        self, vectors: npt.NDArray[np.float32], max_angle_rad: float
+        self,
+        vectors: npt.NDArray[np.float32],
+        magnitudes: npt.NDArray[np.float32],
+        max_angle_rad: float,
+        max_magnitude: float,
     ) -> list[tuple[list[float], float]]: ...
     def look_up_close_angles_naive(
-        self, vectors: npt.NDArray[np.float32], max_angle_rad: float
+        self,
+        vectors: npt.NDArray[np.float32],
+        magnitudes: npt.NDArray[np.float32],
+        max_angle_rad: float,
+        max_magnitude: float,
     ) -> list[tuple[list[float], float]]: ...
 
 def get_threshold_from_histogram(

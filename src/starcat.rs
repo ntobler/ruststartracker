@@ -8,6 +8,7 @@ use nalgebra::Vector3;
 use serde::Deserialize;
 
 const AU: f64 = 149_597_870.693;
+#[cfg(feature = "gaia")]
 const GAIA_EPOCH: f64 = 2016.0;
 #[cfg(feature = "gaia")]
 const GAIA_2016_CSV: &str = include_str!("../ruststartracker/gaia_data_j2016.csv");
@@ -183,6 +184,8 @@ impl StarCatalog {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const GAIA_EPOCH: f64 = 2016.0;
 
     #[test]
     fn test_starcat() {

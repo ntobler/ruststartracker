@@ -87,8 +87,10 @@ class StarTracker:
     def __init__(
         self,
         stars_xyz: npt.NDArray[np.float32],
+        stars_mag: npt.NDArray[np.float32],
         camera_params: CameraParameters,
         *,
+        max_lookup_magnitude: float | None = None,
         max_inter_star_angle: float | None = None,
         inter_star_angle_tolerance: float = 0.0008,
         n_minimum_matches: int = 10,
@@ -98,11 +100,15 @@ class StarTracker:
 
         Args:
             stars_xyz: Positions of catalog stars
+            stars_mag: Magnitudes of catalog stars
             camera_params: Calibrated camera parameters
+            max_lookup_magnitude: Maximum magnitude of stars used in the triangulation. Reducing
+                this number means only bright stars are used for triangulation. This results in
+                faster lookup performance.
             max_inter_star_angle: Maximum angle between stars that should be indexed.
                 Calculating large inter star angles is expensive. If None, the angle is
                 calculated from the camera field of view.
-            inter_star_angle_tolerance: Tolerance for inter star angle matching.
+            inter_star_angle_tolerance: Tolerance for inter star angle matching in rad.
             n_minimum_matches: Minimum amount of required matches for a successful
                 attitude estimation
             timeout_secs: Maximum allowed search time in seconds. A StarTrackerError is raised
@@ -127,8 +133,13 @@ class StarTracker:
             dot_products = (corner_coords_xyz * np.array([0, 0, 1], dtype=np.float32)).sum(axis=-1)
             max_inter_star_angle = float(np.arccos(dot_products.max())) * 2
 
+        if max_lookup_magnitude is None:
+            max_lookup_magnitude = 100.0  # A very faint star. Almost infinity
+
         self._star_matcher = ruststartracker.libruststartracker.StarMatcher(
             np.ascontiguousarray(stars_xyz, dtype=np.float32),
+            np.ascontiguousarray(stars_mag, dtype=np.float32),
+            float(max_lookup_magnitude),
             float(max_inter_star_angle),
             float(inter_star_angle_tolerance),
             int(n_minimum_matches),
@@ -252,12 +263,12 @@ class StarTracker:
         quat, match_ids, obs_indices, n_matches, matched_obs, duration_s = result
 
         return StarTrackerResult(
-            quat=np.asarray(quat, dtype=np.float32),
-            match_ids=np.asarray(match_ids, dtype=np.uint32),
+            quat=quat,
+            match_ids=match_ids,
             n_matches=n_matches,
             duration_s=duration_s,
-            mached_obs_x=np.asarray(matched_obs, dtype=np.float32),
-            obs_indices=np.asarray(obs_indices, dtype=np.uint32),
+            mached_obs_x=matched_obs,
+            obs_indices=obs_indices,
         )
 
 

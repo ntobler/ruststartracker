@@ -43,6 +43,8 @@ def setup():
     vec = rng.normal(size=[n_cat_stars, 3]).astype(np.float32)
     vec /= np.linalg.norm(vec, axis=-1, keepdims=True)
 
+    mag = rng.uniform(0, 10, size=vec.shape[:1]).astype(np.float32)
+
     angle_threshold = np.radians(10)
     dotp = np.sum([0, 0, 1] * vec, axis=-1)
     threshold = np.cos(angle_threshold).item()
@@ -70,17 +72,18 @@ def setup():
         image_patch = img[y - 1 : y + 2, x - 1 : x + 2]
         image_patch[:] = 50
 
-    return img, vec, pixel_in_frame, camera_params
+    return img, vec, mag, pixel_in_frame, camera_params
 
 
 def test_star_matcher_success(setup):
-    img, vec, _, camera_params = setup
+    img, vec, mag, _, camera_params = setup
 
     rot = scipy.spatial.transform.Rotation.from_rotvec([1, 1, 1])
     vec = rot.inv().apply(vec)
 
     st = ruststartracker.StarTracker(
         vec,
+        mag,
         camera_params,
         inter_star_angle_tolerance=np.radians(0.1).item(),
         n_minimum_matches=6,
@@ -93,9 +96,10 @@ def test_star_matcher_success(setup):
 
 
 def test_star_matcher_exhaust(setup):
-    img, vec, _, camera_params = setup
+    img, vec, mag, _, camera_params = setup
     st = ruststartracker.StarTracker(
         vec,
+        mag,
         camera_params,
         inter_star_angle_tolerance=np.radians(0.001).item(),
         n_minimum_matches=500,
@@ -106,10 +110,11 @@ def test_star_matcher_exhaust(setup):
 
 
 def test_star_matcher_timout(setup):
-    img, vec, _, camera_params = setup
-    timeout = 0.2
+    img, vec, mag, _, camera_params = setup
+    timeout = 0.0002
     st = ruststartracker.StarTracker(
         vec,
+        mag,
         camera_params,
         inter_star_angle_tolerance=np.radians(0.1).item(),
         n_minimum_matches=500,
@@ -123,10 +128,11 @@ def test_star_matcher_timout(setup):
 
 
 def test_star_matcher_not_enough_stars(setup):
-    _, vec, pixel_in_frame, camera_params = setup
+    _, vec, mag, pixel_in_frame, camera_params = setup
     timeout = 0.2
     st = ruststartracker.StarTracker(
         vec,
+        mag,
         camera_params,
         inter_star_angle_tolerance=np.radians(0.1).item(),
         n_minimum_matches=500,

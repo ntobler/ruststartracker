@@ -26,6 +26,7 @@ def prepare() -> tuple[ruststartracker.StarTracker, np.ndarray]:
 
     catalog = ruststartracker.StarCatalog()
     star_catalog_vecs = catalog.normalized_positions(epoch=2024)
+    star_catalog_magnitudes = catalog.magnitude
 
     camera_params = ruststartracker.CameraParameters(
         camera_matrix=camera_matrix,
@@ -35,6 +36,7 @@ def prepare() -> tuple[ruststartracker.StarTracker, np.ndarray]:
 
     st = ruststartracker.StarTracker(
         star_catalog_vecs,
+        star_catalog_magnitudes,
         camera_params,
         inter_star_angle_tolerance=np.radians(0.05).item(),
         n_minimum_matches=5,
