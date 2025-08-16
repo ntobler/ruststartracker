@@ -14,24 +14,31 @@ Features:
 ## Example
 
 ### Rust
+
+See [examples/basic.rs](examples/basic.rs)
+
 ```rust
 // Get catalog positions
 let catalog: StarCatalog = StarCatalog::from_gaia(max_magnitude: ...).unwrap();
 let stars_xyz: Vec<[f32; 3]> = catalog.normalized_positions(epoch: ..., observer_position: ...);
+let stars_mag: Vec<f32> = catalog.magnitudes();
 
 // Create StarTracker instance (reuse this)
 let star_matcher = StarMatcher::new(
     stars_xyz,
+    stars_mag,
+    max_lookup_magnitude: ...
     max_inter_star_angle: ...,
     inter_star_angle_tolerance: ...,
     min_matches: ...,
     timeout: ...
-)
+);
 
 // Normalized observation in the camera frame
 let obs_xyz_camera: Vec<[f32; 3]> = ...
 
-let result = self.star_matcher.find(&obs_xyz_camera)
+let result = star_matcher.find(&obs_xyz_camera);
+println!("Result: {:?}", result);
 ```
 
 ### Python

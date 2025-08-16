@@ -133,6 +133,7 @@ impl InterStarIndex {
     }
 }
 
+#[derive(Debug)]
 pub struct MatchResult {
     pub quat: [f32; 4],
     pub match_ids: Vec<u32>,

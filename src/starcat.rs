@@ -179,6 +179,16 @@ impl StarCatalog {
 
         vectors
     }
+
+    pub fn magnitudes<T>(&self) -> Vec<T>
+    where
+        f64: Cast<T>,
+    {
+        self.stars
+            .iter()
+            .map(|s| Cast::<T>::cast(s.magnitude))
+            .collect()
+    }
 }
 
 #[cfg(test)]
