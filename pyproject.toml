@@ -7,6 +7,7 @@ readme = "README.md"
 license = "MIT"
 include = [
     { path = "ruststartracker/gaia_data_j2016.csv", format = ["sdist", "wheel"] },
+    { path = "ruststartracker/hipparcos_data_j1991.25.csv", format = ["sdist", "wheel"] },
     { path = "ruststartracker/libruststartracker.so", format = ["wheel"] },
 ]
 
