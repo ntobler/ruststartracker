@@ -8,10 +8,16 @@ use nalgebra::Vector3;
 use serde::Deserialize;
 
 const AU: f64 = 149_597_870.693;
+
 #[cfg(feature = "gaia")]
 const GAIA_EPOCH: f64 = 2016.0;
 #[cfg(feature = "gaia")]
 const GAIA_2016_CSV: &str = include_str!("../ruststartracker/gaia_data_j2016.csv");
+
+#[cfg(feature = "hipparcos")]
+const HIPPARCOS_EPOCH: f64 = 1991.25;
+#[cfg(feature = "hipparcos")]
+const HIPPARCOS_1991_25_CSV: &str = include_str!("../ruststartracker/hipparcos_data_j1991.25.csv");
 
 pub trait Cast<T> {
     fn cast(self) -> T;
@@ -108,6 +114,11 @@ impl StarCatalog {
     #[cfg(feature = "gaia")]
     pub fn new_from_gaia(max_magnitude: Option<f64>) -> Result<Self, String> {
         StarCatalog::new_from_string(GAIA_2016_CSV, GAIA_EPOCH, max_magnitude)
+    }
+
+    #[cfg(feature = "hipparcos")]
+    pub fn new_from_hipparcos(max_magnitude: Option<f64>) -> Result<Self, String> {
+        StarCatalog::new_from_string(HIPPARCOS_1991_25_CSV, HIPPARCOS_EPOCH, max_magnitude)
     }
 
     fn new_from_buffer<T: std::io::Read>(
@@ -257,6 +268,19 @@ mod tests {
         )
         .unwrap();
         let cat2 = StarCatalog::new_from_gaia(Some(5.5)).unwrap();
+        assert!(cat1.stars.len() == cat2.stars.len());
+    }
+
+    #[cfg(feature = "hipparcos")]
+    #[test]
+    fn test_hipparcos() {
+        let cat1 = StarCatalog::new_from_file(
+            "ruststartracker/hipparcos_data_j1991.25.csv",
+            GAIA_EPOCH,
+            Some(5.5),
+        )
+        .unwrap();
+        let cat2 = StarCatalog::new_from_hipparcos(Some(5.5)).unwrap();
         assert!(cat1.stars.len() == cat2.stars.len());
     }
 }

@@ -28,3 +28,4 @@ rand_distr = "0.5.1"
 default = []
 improc = ["opencv"]
 gaia = []
+hipparcos = []
