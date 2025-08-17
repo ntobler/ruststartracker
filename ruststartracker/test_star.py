@@ -20,12 +20,10 @@ def test_extract_observations(impl: str):
     t0 = time.monotonic()
     if impl == "python":
         centers, intensities = ruststartracker.star._extract_observations(img, threshold=30)
-    elif impl == "rust":
+    else:
         centers, intensities = ruststartracker.libruststartracker.extract_observations(
             img, 30, 3, 300
         )
-    else:
-        raise AssertionError
     print(f"Extracting observations took {time.monotonic() - t0:.5f} seconds")
 
     assert isinstance(centers, np.ndarray)

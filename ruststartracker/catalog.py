@@ -7,14 +7,17 @@ import pathlib
 
 import numpy as np
 import numpy.typing as npt
+from typing_extensions import Self
 
 AU: float = 149597870.693
 """Astronomical unit."""
 
-INTERNAL_CATALOG_FILE = (
-    pathlib.Path(__file__).parent.expanduser().absolute() / "gaia_data_j2016.csv"
+GAIA_CATALOG_FILE = pathlib.Path(__file__).parent.expanduser().absolute() / "gaia_data_j2016.csv"
+"""Location of the internal Gaia star catalog file."""
+HIPPARCOS_CATALOG_FILE = (
+    pathlib.Path(__file__).parent.expanduser().absolute() / "hipparcos_data_j1991.25.csv"
 )
-"""Location of the internal star catalog file."""
+"""Location of the internal Hipparcos star catalog file."""
 
 
 def time_to_epoch(t: datetime.datetime) -> float:
@@ -44,24 +47,41 @@ class StarCatalog:
     """Proper motion of the declination in mad."""
     magnitude: npt.NDArray[np.float32]
     """Magnitude values."""
-    epoch: float = 2016.0
+    epoch: float
     """Epoch of the catalog in years."""
 
+    @classmethod
+    def from_gaia(cls, *, max_magnitude: float = 6.0) -> Self:
+        """Read internally provided Gaia catalog file.
+
+        Args:
+            max_magnitude: Maximum magnitude to include.
+        """
+        return cls(GAIA_CATALOG_FILE, epoch=2016.0, max_magnitude=max_magnitude)
+
+    @classmethod
+    def from_hipparcos(cls, *, max_magnitude: float = 6.0) -> Self:
+        """Read internally provided Hipparcos catalog file.
+
+        Args:
+            max_magnitude: Maximum magnitude to include.
+        """
+        return cls(HIPPARCOS_CATALOG_FILE, epoch=1991.25, max_magnitude=max_magnitude)
+
     def __init__(
-        self, filename: pathlib.Path | str | None = None, max_magnitude: float = 6.0
+        self, filename: pathlib.Path | str, *, epoch: float, max_magnitude: float = 6.0
     ) -> None:
         """Read catalog from file.
 
         Args:
             filename: Star catalog filename.
+            epoch: Epoch of the catalog in years.
             max_magnitude: Maximum magnitude to include.
         """
-        # Use locally included star catalog is no file is given
-        filename = INTERNAL_CATALOG_FILE if filename is None else pathlib.Path(filename)
-
+        self.epoch = epoch
         keep_columns = ("ra", "dec", "parallax", "pmra", "pmdec", "phot_g_mean_mag")
 
-        with filename.open("r") as f:
+        with pathlib.Path(filename).open("r") as f:
             it = csv.reader(f, delimiter=",", strict=True)
 
             # Get columns

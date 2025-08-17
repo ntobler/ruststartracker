@@ -91,3 +91,14 @@ Gaia DR3 data is © European Space Agency and is released under the [**Creative 
 
 > Gaia Collaboration, Vallenari et al. (2022), *A\&A* **674**, A1.
 > [DOI: 10.1051/0004-6361/202243940](https://doi.org/10.1051/0004-6361/202243940)
+
+### Hipparcos and Tycho Data
+
+This project includes data from the European Space Agency (ESA) mission **Hipparcos**.
+
+The Hipparcos and Tycho Catalogues were processed by the Hipparcos and Tycho Data Analysis Consortium.
+
+The Hipparcos and Tycho Catalogues are © European Space Agency and are released under the [**Creative Commons Attribution 3.0 IGO (CC BY 3.0 IGO)**](https://creativecommons.org/licenses/by/3.0/igo/) license.
+
+> Perryman, M. A. C., et al. (1997), *Astronomy & Astrophysics* **323**, L49-L52.
+1997A&A...323L..49P

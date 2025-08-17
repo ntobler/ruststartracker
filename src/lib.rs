@@ -254,6 +254,15 @@ impl StarCatalog {
         })
     }
 
+    #[cfg(feature = "hipparcos")]
+    #[classmethod]
+    fn from_hipparcos(_cls: &Bound<'_, PyType>, max_magnitude: Option<f64>) -> PyResult<Self> {
+        Ok(StarCatalog {
+            inner: starcat::StarCatalog::new_from_hipparcos(max_magnitude)
+                .map_err(PyRuntimeError::new_err)?,
+        })
+    }
+
     pub fn normalized_positions(
         &self,
         epoch: Option<f64>,

@@ -24,7 +24,7 @@ def prepare() -> tuple[ruststartracker.StarTracker, np.ndarray]:
 
     dist_coefs = np.array([-0.44120807, -0.15954202, 0.00767012, -0.00213292, -1.64788247])
 
-    catalog = ruststartracker.StarCatalog()
+    catalog = ruststartracker.StarCatalog.from_gaia()
     star_catalog_vecs = catalog.normalized_positions(epoch=2024)
     star_catalog_magnitudes = catalog.magnitude
 

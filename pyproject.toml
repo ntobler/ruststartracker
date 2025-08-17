@@ -33,6 +33,7 @@ scipy-stubs = "^1.14.1.5"
 ruff = "^0.9.3"
 bump-my-version = "^1.2.0"
 astroquery = "^0.4.10"
+typing-extensions = "^4.12.2"
 
 [tool.poetry.build]
 script = "build_script.py"

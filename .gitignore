@@ -12,6 +12,7 @@ __pycache__
 ruststartracker/libruststartracker.*.so
 ruststartracker/libruststartracker.so
 ruststartracker/gaia*.csv
+ruststartracker/hipparcos*.csv
 
 .coverage
 coverage.xml
