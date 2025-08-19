@@ -1,7 +1,7 @@
 use numpy::{self, PyArrayMethods, PyUntypedArrayMethods, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
-#[cfg(feature = "gaia")]
+#[cfg(any(feature = "gaia", feature = "hipparcos"))]
 use pyo3::types::PyType;
 use pyo3::{
     exceptions::PyRuntimeError, pyclass, pymethods, pymodule, types::PyModule, Bound, PyRef,

@@ -5,7 +5,9 @@ target/*
 dist/*
 .venv
 .pytest_cache
+.mypy_cache
 .vscode
+.env
 
 __pycache__
 
