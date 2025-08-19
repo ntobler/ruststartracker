@@ -7,9 +7,10 @@ readme = "README.md"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/ntobler/ruststartracker"
-keywords = ["rust", "startracker", "star", "tracker", "astro", "photography"]
+keywords = ["rust", "startracker", "star", "tracker", "astro"]
 include = [
     "src/**",
+    "examples/**",
     "ruststartracker/*.csv",
     "./Cargo.toml",
     "./README.md",
