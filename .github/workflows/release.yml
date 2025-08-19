@@ -39,6 +39,9 @@ jobs:
     needs:
         - make-release
 
+    env:
+      TARGET: real  # "test" for tests, "real" for production
+
     steps:
 
     - name: Checkout code
@@ -70,6 +73,24 @@ jobs:
         done
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and publish rust crate dry-run
+      if: env.TARGET == 'test'
+      run: |
+        echo "${{ secrets.CRATESIO_KEY }}" | cargo login
+        cargo package
+        cargo publish --dry-run
+      env:
+        CRATESIO_KEY: ${{ secrets.CRATESIO_KEY }}
+
+    - name: Build and publish rust crate
+      if: env.TARGET == 'real'
+      run: |
+        echo "${{ secrets.CRATESIO_KEY }}" | cargo login
+        cargo package
+        cargo publish
+      env:
+        CRATESIO_KEY: ${{ secrets.CRATESIO_KEY }}
 
   build-python-wheels:
     name: Build Python Wheels

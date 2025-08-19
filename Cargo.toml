@@ -1,7 +1,19 @@
 [package]
 name = "ruststartracker"
 version = "0.2.4"
+description = "Lightweight Star Tracker"
+authors = ["Nicolas Tobler <nitobler@gmail.com>"]
+readme = "README.md"
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/ntobler/ruststartracker"
+keywords = ["rust", "startracker", "star", "tracker", "astro", "photography"]
+include = [
+    "src/**",
+    "ruststartracker/*.csv",
+    "./Cargo.toml",
+    "./README.md",
+]
 
 [lib]
 name = "ruststartracker"
