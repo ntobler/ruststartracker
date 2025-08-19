@@ -78,8 +78,7 @@ jobs:
       if: env.TARGET == 'test'
       run: |
         echo "${{ secrets.CRATESIO_KEY }}" | cargo login
-        cargo package
-        cargo publish --dry-run
+        cargo publish --allow-dirty --dry-run
       env:
         CRATESIO_KEY: ${{ secrets.CRATESIO_KEY }}
 
@@ -87,8 +86,7 @@ jobs:
       if: env.TARGET == 'real'
       run: |
         echo "${{ secrets.CRATESIO_KEY }}" | cargo login
-        cargo package
-        cargo publish
+        cargo publish --allow-dirty
       env:
         CRATESIO_KEY: ${{ secrets.CRATESIO_KEY }}
 
