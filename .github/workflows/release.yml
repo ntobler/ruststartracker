@@ -137,7 +137,41 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libclang-dev libopencv-dev
+        sudo apt-get install -y libclang-dev build-essential cmake git pkg-config
+
+    - name: Install OpenCV dependencies
+      run: |
+        git clone --branch 4.8.1 --depth 1 https://github.com/opencv/opencv.git
+        cd opencv
+        mkdir build && cd build
+        cmake .. \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DBUILD_TESTS=OFF \
+          -DBUILD_PERF_TESTS=OFF \
+          -DBUILD_EXAMPLES=OFF \
+          -DBUILD_opencv_core=ON \
+          -DBUILD_opencv_imgproc=ON \
+          -DBUILD_opencv_highgui=OFF \
+          -DBUILD_opencv_video=OFF \
+          -DBUILD_opencv_features2d=OFF \
+          -DBUILD_opencv_python_bindings_generator=OFF \
+          -DBUILD_opencv_gapi=OFF \
+          -DBUILD_opencv_calib3d=OFF \
+          -DBUILD_opencv_imgcodecs=OFF \
+          -DBUILD_opencv_ml=OFF \
+          -DBUILD_opencv_photo=OFF \
+          -DBUILD_opencv_dnn=OFF \
+          -DBUILD_JPEG=OFF \
+          -DBUILD_PNG=OFF \
+          -DBUILD_TIFF=OFF \
+          -DBUILD_WEBP=OFF \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX=/opt/opencv-static \
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+          -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+          -DOPENCV_GENERATE_PKGCONFIG=ON
+        make -j$(nproc)
+        make install
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
@@ -151,6 +185,7 @@ jobs:
         poetry build --format wheel
       env:
         POETRY_VIRTUALENVS_CREATE: false
+        RUST_STARTRACKER_OPENCV_LINK_STATIC: 1
 
     - name: Upload wheel
       run: |

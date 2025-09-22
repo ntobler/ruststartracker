@@ -3,8 +3,10 @@
 This script is automatically run when the pyproject is installed.
 """
 
+import argparse
 import csv
 import io
+import os
 import pathlib
 import shutil
 import subprocess
@@ -99,7 +101,7 @@ def download_hipparcos_data(output_file: pathlib.Path) -> None:
     print(f"Saved to: {output_file}")
 
 
-def build_script() -> None:
+def build_script(*, static: bool = False) -> None:
     """Build rust backend and move shared library to correct folder."""
     cwd = pathlib.Path(__file__).parent.expanduser().absolute()
 
@@ -111,11 +113,19 @@ def build_script() -> None:
     if not hipparcos_file.exists():
         download_hipparcos_data(hipparcos_file)
 
+    env = dict(**os.environ)
+    if static:
+        env["OPENCV_LINK_STATIC"] = "1"
+        env["OPENCV_INCLUDE_PATHS"] = "/opt/opencv-static/include/opencv4"
+        env["OPENCV_LIBRARY_PATHS"] = "/opt/opencv-static/lib"
+        env["PKG_CONFIG_PATH"] = "/opt/opencv-static/lib/pkgconfig"
+
     subprocess.check_call(  # noqa: S603
         ["cargo", "build", "--release", "--features", "improc,gaia,hipparcos"],  # noqa: S607
         cwd=cwd,
         stdout=None,
         stderr=None,
+        env=env,
     )
     shutil.copy(
         cwd / "target/release/libruststartracker.so", cwd / "ruststartracker/libruststartracker.so"
@@ -123,4 +133,11 @@ def build_script() -> None:
 
 
 if __name__ == "__main__":
-    build_script()
+    parser = argparse.ArgumentParser(description="Build the StarTracker project.")
+    parser.add_argument(
+        "--static", action="store_true", help="Link opencv statically.", default=False
+    )
+
+    args = parser.parse_args()
+
+    build_script(static=args.static or os.environ.get("RUST_STARTRACKER_OPENCV_LINK_STATIC") == "1")
