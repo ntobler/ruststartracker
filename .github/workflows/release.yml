@@ -165,6 +165,12 @@ jobs:
           -DBUILD_PNG=OFF \
           -DBUILD_TIFF=OFF \
           -DBUILD_WEBP=OFF \
+          -DWITH_ITT=OFF \
+          -DBUILD_ITT=OFF \
+          -DWITH_IPP=OFF \
+          -DWITH_IPPICV=OFF \
+          -DBUILD_IPP_IW=OFF \
+          -DBUILD_WITH_DYNAMIC_IPP=OFF \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_INSTALL_PREFIX=/opt/opencv-static \
           -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
