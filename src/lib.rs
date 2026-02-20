@@ -4,8 +4,7 @@ use pyo3::types::PyAny;
 #[cfg(any(feature = "gaia", feature = "hipparcos"))]
 use pyo3::types::PyType;
 use pyo3::{
-    exceptions::PyRuntimeError, pyclass, pymethods, pymodule, types::PyModule, Bound, PyRef,
-    PyRefMut, PyResult,
+    exceptions::PyRuntimeError, pyclass, pymethods, pymodule, types::PyModule, Bound, PyResult,
 };
 use std::path::PathBuf;
 use std::{time::Instant, usize};
@@ -20,8 +19,6 @@ mod trianglefinder;
 
 #[pymodule]
 fn libruststartracker(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<TriangleFinder>()?;
-    m.add_class::<IterTriangleFinder>()?;
     m.add_class::<StarMatcher>()?;
     m.add_class::<UnitVectorLookup>()?;
     m.add_class::<StarCatalog>()?;
@@ -30,67 +27,6 @@ fn libruststartracker(m: &Bound<'_, PyModule>) -> PyResult<()> {
     #[cfg(feature = "improc")]
     m.add_function(wrap_pyfunction!(extract_observations, m)?)?;
     Ok(())
-}
-
-#[pyclass]
-struct TriangleFinder {
-    inner: trianglefinder::TriangleFinder,
-}
-
-#[pymethods]
-impl TriangleFinder {
-    #[new]
-    fn new(
-        connections_ab: Vec<[u32; 2]>,
-        connections_ac: Vec<[u32; 2]>,
-        connections_bc: Vec<[u32; 2]>,
-    ) -> Self {
-        TriangleFinder {
-            inner: trianglefinder::TriangleFinder::new(
-                connections_ab,
-                connections_ac,
-                connections_bc,
-            ),
-        }
-    }
-
-    pub fn get(&self) -> PyResult<Option<[u32; 3]>> {
-        Ok(self.inner.get())
-    }
-
-    pub fn get_all(&self) -> PyResult<Vec<[u32; 3]>> {
-        Ok(self.inner.get_all())
-    }
-}
-
-#[pyclass]
-struct IterTriangleFinder {
-    iter: trianglefinder::IterTriangleFinder,
-}
-
-#[pymethods]
-impl IterTriangleFinder {
-    #[new]
-    fn new(
-        connections_ab: Vec<[u32; 2]>,
-        connections_ac: Vec<[u32; 2]>,
-        connections_bc: Vec<[u32; 2]>,
-    ) -> Self {
-        IterTriangleFinder {
-            iter: trianglefinder::IterTriangleFinder::new(trianglefinder::TriangleFinder::new(
-                connections_ab,
-                connections_ac,
-                connections_bc,
-            )),
-        }
-    }
-
-    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
-        slf
-    }
-    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<[u32; 3]> {
-        slf.iter.next()
-    }
 }
 
 #[pyclass]

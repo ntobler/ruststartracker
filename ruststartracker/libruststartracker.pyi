@@ -1,5 +1,3 @@
-from collections.abc import Iterator
-
 import numpy as np
 import numpy.typing as npt
 from typing_extensions import Self
@@ -25,24 +23,6 @@ class StarMatcher:
         npt.NDArray[np.float32],
         float,
     ]: ...
-
-class TriangleFinder:
-    def __init__(
-        self,
-        ab: npt.NDArray[np.float32],
-        ac: npt.NDArray[np.float32],
-        bc: npt.NDArray[np.float32],
-    ) -> None: ...
-    def get(self) -> list[int]: ...
-
-class IterTriangleFinder:
-    def __init__(
-        self,
-        ab: npt.NDArray[np.float32],
-        ac: npt.NDArray[np.float32],
-        bc: npt.NDArray[np.float32],
-    ) -> None: ...
-    def __iter__(self) -> Iterator[list[int]]: ...
 
 class UnitVectorLookup:
     def __init__(self, vec: npt.NDArray[np.float32]) -> None: ...

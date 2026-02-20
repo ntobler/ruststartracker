@@ -1,14 +1,14 @@
-pub struct TriangleFinder {
-    connections_ab: Vec<[u32; 2]>,
-    connections_ac: Vec<[u32; 2]>,
-    connections_bc: Vec<[u32; 2]>,
+pub struct TriangleFinder<'a> {
+    connections_ab: &'a [[u32; 2]],
+    connections_ac: &'a [[u32; 2]],
+    connections_bc: &'a [[u32; 2]],
 }
 
-impl TriangleFinder {
+impl<'a> TriangleFinder<'a> {
     pub fn new(
-        connections_ab: Vec<[u32; 2]>,
-        connections_ac: Vec<[u32; 2]>,
-        connections_bc: Vec<[u32; 2]>,
+        connections_ab: &'a [[u32; 2]],
+        connections_ac: &'a [[u32; 2]],
+        connections_bc: &'a [[u32; 2]],
     ) -> Self {
         TriangleFinder {
             connections_ab,
@@ -21,11 +21,11 @@ impl TriangleFinder {
         let mut c_candidates = Vec::new();
         let mut flipped_c_candidates = Vec::new();
 
-        for [a, b] in &self.connections_ab {
+        for [a, b] in self.connections_ab {
             c_candidates.clear();
             flipped_c_candidates.clear();
 
-            for [n1, n2] in &self.connections_ac {
+            for [n1, n2] in self.connections_ac {
                 if a == n1 {
                     c_candidates.push(n2)
                 } else if a == n2 {
@@ -43,7 +43,7 @@ impl TriangleFinder {
                 continue;
             }
 
-            for [n1, n2] in &self.connections_bc {
+            for [n1, n2] in self.connections_bc.iter() {
                 if b == n1 {
                     c_candidates.push(n2)
                 } else if b == n2 {
@@ -87,11 +87,11 @@ impl TriangleFinder {
         let mut flipped_c_candidates = Vec::new();
         let mut results = Vec::new();
 
-        for [a, b] in &self.connections_ab {
+        for [a, b] in self.connections_ab {
             c_candidates.clear();
             flipped_c_candidates.clear();
 
-            for [n1, n2] in &self.connections_ac {
+            for [n1, n2] in self.connections_ac {
                 if a == n1 {
                     c_candidates.push(n2)
                 } else if a == n2 {
@@ -109,7 +109,7 @@ impl TriangleFinder {
                 continue;
             }
 
-            for [n1, n2] in &self.connections_bc {
+            for [n1, n2] in self.connections_bc {
                 if b == n1 {
                     c_candidates.push(n2)
                 } else if b == n2 {
@@ -149,8 +149,8 @@ impl TriangleFinder {
     }
 }
 
-pub struct IterTriangleFinder {
-    triangle_finder: TriangleFinder,
+pub struct IterTriangleFinder<'a> {
+    triangle_finder: TriangleFinder<'a>,
     segment_id: usize,
     c_candidates: Vec<u32>,
     flipped_c_candidates: Vec<u32>,
@@ -158,8 +158,8 @@ pub struct IterTriangleFinder {
     index: usize,
 }
 
-impl IterTriangleFinder {
-    pub fn new(triangle_finder: TriangleFinder) -> Self {
+impl<'a> IterTriangleFinder<'a> {
+    pub fn new(triangle_finder: TriangleFinder<'a>) -> Self {
         IterTriangleFinder {
             triangle_finder,
             segment_id: 0,
@@ -249,7 +249,7 @@ impl IterTriangleFinder {
     }
 }
 
-impl Iterator for IterTriangleFinder {
+impl<'a> Iterator for IterTriangleFinder<'a> {
     type Item = [u32; 3];
     fn next(&mut self) -> Option<[u32; 3]> {
         loop {
@@ -264,5 +264,26 @@ impl Iterator for IterTriangleFinder {
                 return res;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_triangle_finder() {
+        let ab = vec![[234, 5643], [1, 2], [2, 4], [3, 9], [2, 6]];
+        let ac = vec![[345, 2343], [8, 2], [3, 4], [1, 7], [0, 5], [3, 1]];
+        let bc = vec![[435, 4355], [1, 0], [4, 8], [8, 1], [1, 9]];
+
+        let f = TriangleFinder::new(&ab, &ac, &bc);
+        assert!(f.get() == Some([1, 2, 8]));
+        assert!(f.get_all() == vec![[1, 2, 8], [2, 4, 8], [3, 9, 1]]);
+
+        let i = IterTriangleFinder::new(f);
+        let vec = i.collect::<Vec<[u32; 3]>>();
+        assert!(vec == vec![[1, 2, 8], [2, 4, 8], [3, 9, 1]]);
     }
 }

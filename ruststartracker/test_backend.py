@@ -7,20 +7,6 @@ import scipy.spatial
 from ruststartracker import libruststartracker
 
 
-def test_triangle_finder():
-    ab = np.array([[234, 5643], [1, 2], [2, 4], [3, 9], [2, 6]])
-    ac = np.array([[345, 2343], [8, 2], [3, 4], [1, 7], [0, 5], [3, 1]])
-    bc = np.array([[435, 4355], [1, 0], [4, 8], [8, 1], [1, 9]])
-
-    f = libruststartracker.TriangleFinder(ab, ac, bc)
-    assert f.get() == [1, 2, 8]
-    assert list(libruststartracker.IterTriangleFinder(ab, ac, bc)) == [
-        [1, 2, 8],
-        [2, 4, 8],
-        [3, 9, 1],
-    ]
-
-
 def test_unit_vector_lookup():
     rng = np.random.default_rng(42)
     n_vecs = 2617
