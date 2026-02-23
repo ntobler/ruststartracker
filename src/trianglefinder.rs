@@ -1,251 +1,78 @@
-pub struct TriangleFinder<'a> {
+pub struct IterTriangleFinder<'a> {
     connections_ab: &'a [[u32; 2]],
     connections_ac: &'a [[u32; 2]],
     connections_bc: &'a [[u32; 2]],
+    ab_index: usize,
+    c_candidates_given_a_is_ab1: Vec<u32>,
+    c_candidates_given_a_is_ab2: Vec<u32>,
+    matches: Vec<[u32; 3]>,
 }
 
-impl<'a> TriangleFinder<'a> {
+impl<'a> IterTriangleFinder<'a> {
     pub fn new(
         connections_ab: &'a [[u32; 2]],
         connections_ac: &'a [[u32; 2]],
         connections_bc: &'a [[u32; 2]],
     ) -> Self {
-        TriangleFinder {
+        IterTriangleFinder {
             connections_ab,
             connections_ac,
             connections_bc,
+            ab_index: 0,
+            c_candidates_given_a_is_ab1: Vec::with_capacity(128),
+            c_candidates_given_a_is_ab2: Vec::with_capacity(128),
+            matches: Vec::with_capacity(128),
         }
     }
 
-    pub fn get(&self) -> Option<[u32; 3]> {
-        let mut c_candidates = Vec::new();
-        let mut flipped_c_candidates = Vec::new();
+    fn search_next(&mut self, ab_index: usize) {
+        // We are looking for triples (a, b, c) such that:
+        // (a, b) in connections_ab
+        // (a, c) in connections_ac
+        // (b, c) in connections_bc
+        //
+        // Creating an index for connections_ac and connections_bc would be faster,
+        // but it would also require more memory. Instead, we will just iterate over
+        // the connections_ac and connections_bc for each (a, b) pair in connections_ab.
 
-        for [a, b] in self.connections_ab {
-            c_candidates.clear();
-            flipped_c_candidates.clear();
+        let [ab1, ab2] = self.connections_ab[ab_index];
 
-            for [n1, n2] in self.connections_ac {
-                if a == n1 {
-                    c_candidates.push(n2)
-                } else if a == n2 {
-                    c_candidates.push(n1)
-                }
+        self.c_candidates_given_a_is_ab1.clear();
+        self.c_candidates_given_a_is_ab2.clear();
 
-                if b == n1 {
-                    flipped_c_candidates.push(n2)
-                } else if b == n2 {
-                    flipped_c_candidates.push(n1)
-                }
+        for &[ac1, ac2] in self.connections_ac {
+            if ab1 == ac1 {
+                self.c_candidates_given_a_is_ab1.push(ac2)
+            } else if ab1 == ac2 {
+                self.c_candidates_given_a_is_ab1.push(ac1)
             }
 
-            if c_candidates.is_empty() && flipped_c_candidates.is_empty() {
-                continue;
+            if ab2 == ac1 {
+                self.c_candidates_given_a_is_ab2.push(ac2)
+            } else if ab2 == ac2 {
+                self.c_candidates_given_a_is_ab2.push(ac1)
             }
+        }
 
-            for [n1, n2] in self.connections_bc.iter() {
-                if b == n1 {
-                    c_candidates.push(n2)
-                } else if b == n2 {
-                    c_candidates.push(n1)
+        for &[bc1, bc2] in self.connections_bc {
+            if ab2 == bc1 {
+                if self.c_candidates_given_a_is_ab1.contains(&bc2) {
+                    self.matches.push([ab1, ab2, bc2]);
                 }
-
-                if a == n1 {
-                    flipped_c_candidates.push(n2)
-                } else if a == n2 {
-                    flipped_c_candidates.push(n1)
+            } else if ab2 == bc2 {
+                if self.c_candidates_given_a_is_ab1.contains(&bc1) {
+                    self.matches.push([ab1, ab2, bc1]);
                 }
-            }
-
-            if c_candidates.len() >= 2 {
-                c_candidates.sort_unstable();
-                let mut prev = c_candidates[0];
-                for c in c_candidates.iter().skip(1) {
-                    if *c == prev {
-                        return Some([*a, *b, **c]);
-                    }
-                    prev = *c;
+            } else if ab1 == bc1 {
+                if self.c_candidates_given_a_is_ab2.contains(&bc2) {
+                    self.matches.push([ab2, ab1, bc2]);
                 }
-            }
-
-            if flipped_c_candidates.len() >= 2 {
-                flipped_c_candidates.sort_unstable();
-                let mut prev = flipped_c_candidates[0];
-                for c in flipped_c_candidates.iter().skip(1) {
-                    if *c == prev {
-                        return Some([*a, *b, **c]);
-                    }
-                    prev = *c;
+            } else if ab1 == bc2 {
+                if self.c_candidates_given_a_is_ab2.contains(&bc1) {
+                    self.matches.push([ab2, ab1, bc1]);
                 }
             }
         }
-        return None;
-    }
-
-    pub fn get_all(&self) -> Vec<[u32; 3]> {
-        let mut c_candidates = Vec::new();
-        let mut flipped_c_candidates = Vec::new();
-        let mut results = Vec::new();
-
-        for [a, b] in self.connections_ab {
-            c_candidates.clear();
-            flipped_c_candidates.clear();
-
-            for [n1, n2] in self.connections_ac {
-                if a == n1 {
-                    c_candidates.push(n2)
-                } else if a == n2 {
-                    c_candidates.push(n1)
-                }
-
-                if b == n1 {
-                    flipped_c_candidates.push(n2)
-                } else if b == n2 {
-                    flipped_c_candidates.push(n1)
-                }
-            }
-
-            if c_candidates.is_empty() && flipped_c_candidates.is_empty() {
-                continue;
-            }
-
-            for [n1, n2] in self.connections_bc {
-                if b == n1 {
-                    c_candidates.push(n2)
-                } else if b == n2 {
-                    c_candidates.push(n1)
-                }
-
-                if a == n1 {
-                    flipped_c_candidates.push(n2)
-                } else if a == n2 {
-                    flipped_c_candidates.push(n1)
-                }
-            }
-
-            if c_candidates.len() >= 2 {
-                c_candidates.sort_unstable();
-                let mut prev = c_candidates[0];
-                for c in c_candidates.iter().skip(1) {
-                    if *c == prev {
-                        results.push([*a, *b, **c]);
-                    }
-                    prev = *c;
-                }
-            }
-
-            if flipped_c_candidates.len() >= 2 {
-                flipped_c_candidates.sort_unstable();
-                let mut prev = flipped_c_candidates[0];
-                for c in flipped_c_candidates.iter().skip(1) {
-                    if *c == prev {
-                        results.push([*a, *b, **c]);
-                    }
-                    prev = *c;
-                }
-            }
-        }
-        results
-    }
-}
-
-pub struct IterTriangleFinder<'a> {
-    triangle_finder: TriangleFinder<'a>,
-    segment_id: usize,
-    c_candidates: Vec<u32>,
-    flipped_c_candidates: Vec<u32>,
-    result: Vec<[u32; 3]>,
-    index: usize,
-}
-
-impl<'a> IterTriangleFinder<'a> {
-    pub fn new(triangle_finder: TriangleFinder<'a>) -> Self {
-        IterTriangleFinder {
-            triangle_finder,
-            segment_id: 0,
-            c_candidates: Vec::new(),
-            flipped_c_candidates: Vec::new(),
-            result: Vec::new(),
-            index: 0,
-        }
-    }
-
-    fn search_next(&mut self) -> bool {
-        let finder = &self.triangle_finder;
-
-        self.result.clear();
-
-        while self.segment_id < finder.connections_ab.len() {
-            let [a, b] = finder.connections_ab[self.segment_id];
-
-            self.segment_id += 1;
-
-            self.c_candidates.clear();
-            self.flipped_c_candidates.clear();
-
-            for [n1, n2] in finder.connections_ac.iter() {
-                if a == *n1 {
-                    self.c_candidates.push(*n2)
-                } else if a == *n2 {
-                    self.c_candidates.push(*n1)
-                }
-
-                if b == *n1 {
-                    self.flipped_c_candidates.push(*n2)
-                } else if b == *n2 {
-                    self.flipped_c_candidates.push(*n1)
-                }
-            }
-
-            if self.c_candidates.is_empty() && self.flipped_c_candidates.is_empty() {
-                continue;
-            }
-
-            if self.segment_id >= finder.connections_ab.len() {
-                return false;
-            }
-
-            for [n1, n2] in finder.connections_bc.iter() {
-                if b == *n1 {
-                    self.c_candidates.push(*n2)
-                } else if b == *n2 {
-                    self.c_candidates.push(*n1)
-                }
-
-                if a == *n1 {
-                    self.flipped_c_candidates.push(*n2)
-                } else if a == *n2 {
-                    self.flipped_c_candidates.push(*n1)
-                }
-            }
-
-            if self.c_candidates.len() >= 2 {
-                self.c_candidates.sort_unstable();
-                let mut old = self.c_candidates[0];
-                for c in self.c_candidates.iter().skip(1) {
-                    if *c == old {
-                        self.result.push([a, b, *c]);
-                    }
-                    old = *c;
-                }
-            }
-
-            if self.flipped_c_candidates.len() >= 2 {
-                self.flipped_c_candidates.sort_unstable();
-                let mut old = self.flipped_c_candidates[0];
-                for c in self.flipped_c_candidates.iter().skip(1) {
-                    if *c == old {
-                        self.result.push([a, b, *c]);
-                    }
-                    old = *c;
-                }
-            }
-
-            if !self.result.is_empty() {
-                return true;
-            }
-        }
-        return false;
     }
 }
 
@@ -253,15 +80,16 @@ impl<'a> Iterator for IterTriangleFinder<'a> {
     type Item = [u32; 3];
     fn next(&mut self) -> Option<[u32; 3]> {
         loop {
-            if self.index >= self.result.len() {
-                self.index = 0;
-                if !self.search_next() {
-                    return None;
+            match self.matches.pop() {
+                Some(res) => return Some(res),
+                None => {
+                    if self.ab_index < self.connections_ab.len() {
+                        self.search_next(self.ab_index);
+                        self.ab_index += 1;
+                    } else {
+                        return None;
+                    }
                 }
-            } else {
-                let res = Some(self.result[self.index]);
-                self.index += 1;
-                return res;
             }
         }
     }
@@ -274,16 +102,42 @@ mod tests {
 
     #[test]
     fn test_triangle_finder() {
-        let ab = vec![[234, 5643], [1, 2], [2, 4], [3, 9], [2, 6]];
+        let ab = vec![[234, 5643], [1, 2], [2, 4], [3, 9], [2, 6], [1, 0], [3, 1]];
         let ac = vec![[345, 2343], [8, 2], [3, 4], [1, 7], [0, 5], [3, 1]];
-        let bc = vec![[435, 4355], [1, 0], [4, 8], [8, 1], [1, 9]];
+        let bc = vec![[435, 4355], [1, 0], [4, 8], [8, 1], [1, 9], [2, 6], [3, 7]];
 
-        let f = TriangleFinder::new(&ab, &ac, &bc);
-        assert!(f.get() == Some([1, 2, 8]));
-        assert!(f.get_all() == vec![[1, 2, 8], [2, 4, 8], [3, 9, 1]]);
-
-        let i = IterTriangleFinder::new(f);
+        let i = IterTriangleFinder::new(&ab, &ac, &bc);
         let vec = i.collect::<Vec<[u32; 3]>>();
-        assert!(vec == vec![[1, 2, 8], [2, 4, 8], [3, 9, 1]]);
+        assert!(vec == vec![[2, 1, 8], [2, 4, 8], [3, 9, 1], [1, 3, 7]]);
+    }
+
+    #[test]
+    fn test_triangle_finder_performance() {
+        use rand::{rngs::StdRng, Rng, SeedableRng};
+
+        const N: usize = 200;
+        const M: u32 = 200;
+
+        let mut rng = StdRng::seed_from_u64(42);
+        let ab: Vec<[u32; 2]> = (0..N)
+            .map(|_| [rng.random_range(0..M), rng.random_range(0..M)])
+            .filter(|&[a, b]| a != b)
+            .collect();
+        let ac: Vec<[u32; 2]> = (0..N)
+            .map(|_| [rng.random_range(0..M), rng.random_range(0..M)])
+            .filter(|&[a, b]| a != b)
+            .collect();
+        let bc: Vec<[u32; 2]> = (0..N)
+            .map(|_| [rng.random_range(0..M), rng.random_range(0..M)])
+            .filter(|&[a, b]| a != b)
+            .collect();
+
+        let i = IterTriangleFinder::new(&ab, &ac, &bc);
+
+        let start = std::time::Instant::now();
+        let vec = i.collect::<Vec<[u32; 3]>>();
+        let duration = start.elapsed();
+        println!("Vec length: {}", vec.len());
+        println!("Collection took: {:?}", duration);
     }
 }

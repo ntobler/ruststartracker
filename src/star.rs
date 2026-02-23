@@ -264,9 +264,7 @@ impl StarMatcher {
                 .inter_star_index
                 .pair_lookup(angle_bc, self.inter_star_angle_tolerance);
 
-            let finder = trianglefinder::TriangleFinder::new(ab_pairs, ac_pairs, bc_pairs);
-
-            let iter_finder = trianglefinder::IterTriangleFinder::new(finder);
+            let iter_finder = trianglefinder::IterTriangleFinder::new(ab_pairs, ac_pairs, bc_pairs);
 
             // Iterate over possible matching triangles
             for value in iter_finder {
