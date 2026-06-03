@@ -4,8 +4,7 @@ use pyo3::types::PyAny;
 #[cfg(any(feature = "gaia", feature = "hipparcos"))]
 use pyo3::types::PyType;
 use pyo3::{
-    exceptions::PyRuntimeError, pyclass, pymethods, pymodule, types::PyModule, Bound, PyRef,
-    PyRefMut, PyResult,
+    exceptions::PyRuntimeError, pyclass, pymethods, pymodule, types::PyModule, Bound, PyResult,
 };
 use std::path::PathBuf;
 use std::{time::Instant, usize};
@@ -20,8 +19,6 @@ mod trianglefinder;
 
 #[pymodule]
 fn libruststartracker(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<TriangleFinder>()?;
-    m.add_class::<IterTriangleFinder>()?;
     m.add_class::<StarMatcher>()?;
     m.add_class::<UnitVectorLookup>()?;
     m.add_class::<StarCatalog>()?;
@@ -30,67 +27,6 @@ fn libruststartracker(m: &Bound<'_, PyModule>) -> PyResult<()> {
     #[cfg(feature = "improc")]
     m.add_function(wrap_pyfunction!(extract_observations, m)?)?;
     Ok(())
-}
-
-#[pyclass]
-struct TriangleFinder {
-    inner: trianglefinder::TriangleFinder,
-}
-
-#[pymethods]
-impl TriangleFinder {
-    #[new]
-    fn new(
-        connections_ab: Vec<[u32; 2]>,
-        connections_ac: Vec<[u32; 2]>,
-        connections_bc: Vec<[u32; 2]>,
-    ) -> Self {
-        TriangleFinder {
-            inner: trianglefinder::TriangleFinder::new(
-                connections_ab,
-                connections_ac,
-                connections_bc,
-            ),
-        }
-    }
-
-    pub fn get(&self) -> PyResult<Option<[u32; 3]>> {
-        Ok(self.inner.get())
-    }
-
-    pub fn get_all(&self) -> PyResult<Vec<[u32; 3]>> {
-        Ok(self.inner.get_all())
-    }
-}
-
-#[pyclass]
-struct IterTriangleFinder {
-    iter: trianglefinder::IterTriangleFinder,
-}
-
-#[pymethods]
-impl IterTriangleFinder {
-    #[new]
-    fn new(
-        connections_ab: Vec<[u32; 2]>,
-        connections_ac: Vec<[u32; 2]>,
-        connections_bc: Vec<[u32; 2]>,
-    ) -> Self {
-        IterTriangleFinder {
-            iter: trianglefinder::IterTriangleFinder::new(trianglefinder::TriangleFinder::new(
-                connections_ab,
-                connections_ac,
-                connections_bc,
-            )),
-        }
-    }
-
-    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
-        slf
-    }
-    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<[u32; 3]> {
-        slf.iter.next()
-    }
 }
 
 #[pyclass]
@@ -180,7 +116,9 @@ impl UnitVectorLookup {
         magnitudes: numpy::PyReadonlyArray1<'py, f32>,
         max_angle_rad: f32,
         max_magnitude: f32,
-    ) -> PyResult<(Vec<[u32; 2]>, Vec<f32>, [f32; 3])> {
+        inter_star_angle: f32,
+        tolerance_angle: f32,
+    ) -> PyResult<(Vec<[u32; 2]>, Vec<f32>, [f32; 3], Vec<[u32; 2]>)> {
         let stars_slice: &[[f32; 3]] = numpy_to_slice_2d(&stars)?;
         let magnitudes_slice: &[f32] = numpy_to_slice_1d(&magnitudes)?;
         let now = Instant::now();
@@ -188,28 +126,34 @@ impl UnitVectorLookup {
             &self.inner,
             stars_slice,
             magnitudes_slice,
-            max_angle_rad,
+            max_angle_rad.cos(),
             max_magnitude,
         )
         .map_err(|e| {
             PyRuntimeError::new_err(format!("Could not calculate inter star angle: {}", e))
         })?;
 
+        let looked_up_pairs: Vec<[u32; 2]> = res
+            .pair_lookup(inter_star_angle.cos(), tolerance_angle.cos())
+            .iter()
+            .copied()
+            .collect();
+
         println!("Time passed: {:?}", now.elapsed());
-        Ok((res.pairs, res.angles, res.polynomial))
+        Ok((res.pairs, res.cos_angles, res.polynomial, looked_up_pairs))
     }
 
     pub fn look_up_close_angles(
         &self,
         vectors: Vec<[f32; 3]>,
         magnitudes: Vec<f32>,
-        max_angle_rad: f32,
+        cos_max_angle: f32,
         max_magnitude: f32,
     ) -> PyResult<Vec<([u32; 2], f32)>> {
         let now = Instant::now();
         let res =
             self.inner
-                .look_up_close_angles(&vectors, &magnitudes, max_angle_rad, max_magnitude);
+                .look_up_close_angles(&vectors, &magnitudes, cos_max_angle, max_magnitude);
         println!("Time passed: {:?}", now.elapsed());
         Ok(res)
     }

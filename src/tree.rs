@@ -7,7 +7,8 @@ pub struct UnitVectorLookup {
     kdtree: KdTree<f32, usize, [f32; 3]>,
 }
 
-pub fn dot_product(a: &[f32], b: &[f32]) -> f32 {
+#[inline(always)]
+pub fn dot_product(a: &[f32; 3], b: &[f32; 3]) -> f32 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
@@ -30,10 +31,9 @@ impl UnitVectorLookup {
         &self,
         vectors: &[[f32; 3]],
         magnitudes: &[f32],
-        max_angle_rad: f32,
+        cos_max_angle: f32,
         max_magnitude: f32,
     ) -> Vec<([u32; 2], f32)> {
-        let threshold = maths_rs::cos(max_angle_rad);
         let mut index_pairs = Vec::new();
         for a in 0..vectors.len() {
             if magnitudes[a] > max_magnitude {
@@ -46,13 +46,12 @@ impl UnitVectorLookup {
                 }
                 let vec_b = &vectors[*b];
                 let dotp = dot_product(vec_a, vec_b);
-                if dotp < threshold {
+                if dotp < cos_max_angle {
                     // If angle is too large, break here
                     break;
                 }
                 if a < *b {
-                    index_pairs
-                        .push(([a as u32, *b as u32], maths_rs::acos(dotp.clamp(-1.0, 1.0))));
+                    index_pairs.push(([a as u32, *b as u32], dotp.clamp(-1.0, 1.0)));
                 }
             }
         }

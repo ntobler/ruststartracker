@@ -6,26 +6,15 @@ use std::time::Instant;
 
 extern crate nalgebra as na;
 
-/// Return angle between two normalized 3-dimensional vectors.
-fn angle(a: &[f32; 3], b: &[f32; 3]) -> f32 {
-    maths_rs::acos(a[0] * b[0] + a[1] * b[1] + a[2] * b[2])
-}
-
-/// Evaluate a polynomial
-fn polyval(coeffs: &[f32], x: f32) -> f32 {
-    coeffs.iter().rev().fold(0.0, |acc, &c| acc * x + c)
-}
-
 /// Naive implementation for tree::UnitVectorLookup::look_up_close_angles
 /// Calculates all star angles, instead of looking up neighbors in a spatial index
 /// Turned out to be faster in some cases
 pub fn look_up_close_angles_naive(
     vectors: &[[f32; 3]],
     magnitudes: &[f32],
-    max_angle_rad: f32,
+    cos_max_angle: f32,
     max_magnitude: f32,
 ) -> Vec<([u32; 2], f32)> {
-    let threshold = maths_rs::cos(max_angle_rad);
     let mut index_pairs = Vec::new();
     for a in 0..vectors.len() {
         if magnitudes[a] > max_magnitude {
@@ -38,8 +27,8 @@ pub fn look_up_close_angles_naive(
             }
             let vec_b = &vectors[b];
             let dotp = tree::dot_product(vec_a, vec_b);
-            if dotp >= threshold {
-                index_pairs.push(([a as u32, b as u32], maths_rs::acos(dotp)));
+            if dotp >= cos_max_angle {
+                index_pairs.push(([a as u32, b as u32], dotp));
             }
         }
     }
@@ -48,8 +37,8 @@ pub fn look_up_close_angles_naive(
 
 pub struct InterStarIndex {
     pub pairs: Vec<[u32; 2]>,
-    pub angles: Vec<f32>,
-    // polynomial with terms [c0, c1, c2, ..] (c0 + x c1 + x^2 c2)
+    pub cos_angles: Vec<f32>,
+    // polynomial with terms [c0, c1, c2] (c0 + x c1 + x^2 c2)
     pub polynomial: [f32; 3],
 }
 
@@ -58,7 +47,7 @@ impl InterStarIndex {
         star_index: &tree::UnitVectorLookup,
         stars_xyz: &[[f32; 3]],
         stars_mag: &[f32],
-        max_angle_rad: f32,
+        cos_max_angle: f32,
         max_magnitude: f32,
     ) -> Result<InterStarIndex, &'static str> {
         if stars_xyz.len() != stars_mag.len() {
@@ -66,63 +55,104 @@ impl InterStarIndex {
         }
 
         let mut index_pairs =
-            star_index.look_up_close_angles(stars_xyz, stars_mag, max_angle_rad, max_magnitude);
+            star_index.look_up_close_angles(stars_xyz, stars_mag, cos_max_angle, max_magnitude);
 
         if index_pairs.is_empty() {
             return Err("Given star positions do not result in any angles below the threshold.");
         }
 
-        index_pairs.sort_unstable_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        // Sort pairs by increasing angle (cosine of angle is decreasing)
+        index_pairs.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
-        let angles: Vec<f32> = index_pairs.iter().map(|x| x.1).collect();
-        let indices: Vec<f32> = (0..angles.len()).map(|i| i as f32).collect();
+        let scale = (index_pairs.len() + 1) as f32;
+        let inv_scale = 1.0 / scale;
+        let scaled_indices: Vec<f32> = (0..index_pairs.len())
+            .map(|i| i as f32 * inv_scale)
+            .collect();
+        let pairs: Vec<[u32; 2]> = index_pairs.iter().map(|x| x.0).collect();
+        let cos_angles: Vec<f32> = index_pairs.iter().map(|x| x.1).collect();
 
-        // polynomial with terms [c0, c1, c2, ..] (c0 + x c1 + x^2 c2)
-        let mut polynomial: [f32; 3] = polyfit_rs::polyfit_rs::polyfit(&angles, &indices, 2)?
-            .try_into()
-            .map_err(|_| "Failed to convert polynomial coefficients")?;
-
-        let errors: Vec<f32> = angles
+        let transformed_cos_angles: Vec<f32> = cos_angles
             .iter()
-            .enumerate()
-            .map(|x| polyval(&polynomial, *x.1) - (x.0 as f32))
+            .map(|cos_angle: &f32| Self::transform_angle(*cos_angle))
             .collect();
 
-        // let min = errors.iter().cloned().fold(f32::INFINITY, f32::min);
-        let max = errors.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+        // Fit polynomial
+        // polynomial with terms [c0, c1, c2, ..] (c0 + x c1 + x^2 c2)
+        let mut polynomial: [f32; 3] =
+            polyfit_rs::polyfit_rs::polyfit(&transformed_cos_angles, &scaled_indices, 2)?
+                .try_into()
+                .map_err(|_| "Failed to convert polynomial coefficients")?;
 
-        polynomial[0] -= max;
+        let diff_poly_to_value: Vec<f32> = transformed_cos_angles
+            .iter()
+            .enumerate()
+            .map(|(i, &x)| Self::polyval(&polynomial, x) * scale - (i as f32))
+            .collect();
 
-        let pairs = index_pairs.iter().map(|x| x.0).collect();
+        // let min = diff_poly_to_value
+        //     .iter()
+        //     .cloned()
+        //     .fold(f32::INFINITY, f32::min);
+        let max = diff_poly_to_value
+            .iter()
+            .cloned()
+            .fold(f32::NEG_INFINITY, f32::max);
+
+        polynomial[0] -= max * inv_scale;
 
         Ok(InterStarIndex {
             pairs,
-            angles,
+            cos_angles,
             polynomial,
         })
     }
 
+    /// Transform cosine of angle to a value that is more suitable for polynomial fitting
+    fn transform_angle(cos_angle: f32) -> f32 {
+        // 10 is an arbitrary scaling factor that maps an angle of approx 25 degrees to a value of 1.0
+        (1.0 - cos_angle) * 10.0
+    }
+
+    /// Evaluate a polynomial
+    fn polyval<const S: usize>(coeffs: &[f32; S], x: f32) -> f32 {
+        coeffs.iter().rev().fold(0.0, |acc, &c| acc * x + c)
+    }
+
     /// Get star pairs that match given inter star angle.
-    fn pair_lookup(&self, inter_star_angle: f32, tolerance_angle: f32) -> &[[u32; 2]] {
-        let lower_threshold = maths_rs::max(inter_star_angle - tolerance_angle, 0.0);
-        let upper_threshold = maths_rs::max(inter_star_angle + tolerance_angle, 0.0);
-        let lower_index_float = polyval(&self.polynomial, lower_threshold);
-        let upper_index_float = polyval(&self.polynomial, upper_threshold);
-        let max = self.angles.len() - 1;
+    pub fn pair_lookup(&self, cos_inter_star_angle: f32, cos_tolerance_angle: f32) -> &[[u32; 2]] {
+        // Both sine and cosine of the inter star angle are positive if it is between 0 and 1
+        let c = cos_inter_star_angle;
+        let s = (1.0 - c * c).sqrt();
+
+        // Both sine and cosine of the tolerance are positive if it is between 0 and 1
+        let tc = cos_tolerance_angle;
+        let ts = (1.0 - tc * tc).sqrt();
+
+        // Essentially equal to cos(acos(c) +/- acos(tc)), but faster to compute
+        let cos_lower_threshold = c * tc + s * ts;
+        let cos_upper_threshold = c * tc - s * ts;
+
+        let scale = (self.pairs.len() + 1) as f32;
+        let lower_index_float =
+            Self::polyval(&self.polynomial, Self::transform_angle(cos_lower_threshold)) * scale;
+        let upper_index_float =
+            Self::polyval(&self.polynomial, Self::transform_angle(cos_upper_threshold)) * scale;
+        let max = self.cos_angles.len() - 1;
         let mut lower_index = (lower_index_float as usize).clamp(0, max);
         let mut upper_index = (upper_index_float as usize).clamp(0, max);
 
-        lower_index = maths_rs::min(lower_index, upper_index);
+        lower_index = usize::min(lower_index, upper_index);
 
         while lower_index < max {
-            if self.angles[lower_index] > lower_threshold {
+            if self.cos_angles[lower_index] < cos_lower_threshold {
                 break;
             } else {
                 lower_index += 1;
             }
         }
         while upper_index < max {
-            if self.angles[upper_index] > upper_threshold {
+            if self.cos_angles[upper_index] < cos_upper_threshold {
                 break;
             } else {
                 upper_index += 1;
@@ -153,9 +183,7 @@ pub enum FailureReason {
 #[derive(Debug)]
 pub struct DiagnosticData {
     pub reason: FailureReason,
-    pub first_svd_failures: usize,
-    pub second_svd_failures: usize,
-    pub third_svd_failures: usize,
+    pub svd_failures: usize,
     pub max_first_matches: usize,
     pub max_refined_matches: usize,
 }
@@ -164,9 +192,7 @@ impl DiagnosticData {
     pub fn new() -> Self {
         DiagnosticData {
             reason: FailureReason::Unspecified,
-            first_svd_failures: 0,
-            second_svd_failures: 0,
-            third_svd_failures: 0,
+            svd_failures: 0,
             max_first_matches: 0,
             max_refined_matches: 0,
         }
@@ -184,9 +210,8 @@ pub struct StarMatcher {
     stars_xyz: Vec<[f32; 3]>,
     star_index: tree::UnitVectorLookup,
     inter_star_index: InterStarIndex,
-    /// tolerance of inter star angle in rad
-    inter_star_angle_tolerance: f32,
-    max_inter_star_angle: f32,
+    cos_inter_star_angle_tolerance: f32,
+    max_cos_inter_star_angle: f32,
     n_minimum_matches: usize,
     timeout_secs: f32,
 }
@@ -206,15 +231,15 @@ impl StarMatcher {
             &star_index,
             &stars_xyz,
             &stars_mag,
-            max_inter_star_angle,
+            max_inter_star_angle.cos(),
             max_lookup_magnitude,
         )?;
         Ok(StarMatcher {
             stars_xyz,
             star_index,
             inter_star_index,
-            inter_star_angle_tolerance,
-            max_inter_star_angle,
+            cos_inter_star_angle_tolerance: inter_star_angle_tolerance.cos(),
+            max_cos_inter_star_angle: max_inter_star_angle.cos(),
             n_minimum_matches,
             timeout_secs,
         })
@@ -242,41 +267,49 @@ impl StarMatcher {
             let obs_c = obs_xyz[c as usize];
 
             // find the inter star angles between the 3 observations
-            let angle_ab = angle(&obs_a, &obs_b);
-            let angle_ac = angle(&obs_a, &obs_c);
-            let angle_bc = angle(&obs_b, &obs_c);
+            let cos_angle_ab = tree::dot_product(&obs_a, &obs_b);
+            let cos_angle_ac = tree::dot_product(&obs_a, &obs_c);
+            let cos_angle_bc = tree::dot_product(&obs_b, &obs_c);
 
             // Continue if any angle is larger than the maximum
             // angle contained in the inter star angle index
-            let t = self.max_inter_star_angle;
-            if (angle_ab > t) || (angle_ac > t) || (angle_bc > t) {
+            let t = self.max_cos_inter_star_angle;
+            if (cos_angle_ab < t) || (cos_angle_ac < t) || (cos_angle_bc < t) {
                 continue;
             }
 
             // Look up all pairs in the catalog that could match the observations
             let ab_pairs = self
                 .inter_star_index
-                .pair_lookup(angle_ab, self.inter_star_angle_tolerance);
+                .pair_lookup(cos_angle_ab, self.cos_inter_star_angle_tolerance);
             let ac_pairs = self
                 .inter_star_index
-                .pair_lookup(angle_ac, self.inter_star_angle_tolerance);
+                .pair_lookup(cos_angle_ac, self.cos_inter_star_angle_tolerance);
             let bc_pairs = self
                 .inter_star_index
-                .pair_lookup(angle_bc, self.inter_star_angle_tolerance);
+                .pair_lookup(cos_angle_bc, self.cos_inter_star_angle_tolerance);
 
-            let finder = trianglefinder::TriangleFinder::new(
-                ab_pairs.to_vec(),
-                ac_pairs.to_vec(),
-                bc_pairs.to_vec(),
-            );
-
-            let iter_finder = trianglefinder::IterTriangleFinder::new(finder);
+            let iter_finder = trianglefinder::IterTriangleFinder::new(ab_pairs, ac_pairs, bc_pairs);
 
             // Iterate over possible matching triangles
-            for value in iter_finder {
-                if let Some(x) = self.check(&obs_indices, &obs_xyz, &value, &mut diagnostic_data) {
-                    return Ok(x);
-                };
+            for abc_candidate in iter_finder {
+                match self.check(&obs_indices, &obs_xyz, &abc_candidate) {
+                    Ok(x) => return Ok(x),
+                    Err(StarError::SVDFailure) => {
+                        diagnostic_data.svd_failures += 1;
+                    }
+                    Err(StarError::NotEnoughFirstMatches(n)) => {
+                        diagnostic_data.max_first_matches =
+                            usize::max(diagnostic_data.max_first_matches, n);
+                    }
+                    Err(StarError::NotEnoughRefinedMatches(n)) => {
+                        diagnostic_data.max_refined_matches =
+                            usize::max(diagnostic_data.max_refined_matches, n);
+                    }
+                    Err(_) => {
+                        // Other errors are not tracked in the diagnostics
+                    }
+                }
             }
 
             if start_instant.elapsed().as_secs_f32() > self.timeout_secs {
@@ -301,8 +334,7 @@ impl StarMatcher {
         obs_indices: &[u32; 3],
         obs_xyz: &[[f32; 3]],
         cat_indices: &[u32; 3],
-        diagnostic_data: &mut DiagnosticData,
-    ) -> Option<MatchResult> {
+    ) -> Result<MatchResult, StarError> {
         // Get vectors of observed triangle
         let obs_triangle_xyz = [
             obs_xyz[obs_indices[0] as usize],
@@ -318,13 +350,7 @@ impl StarMatcher {
         ];
 
         // Fit rotation matrix on triangle
-        let rotm = match attitude_svd(&cat_triangle_xyz, &obs_triangle_xyz) {
-            None => {
-                diagnostic_data.first_svd_failures += 1;
-                return None;
-            }
-            Some(value) => value.cast::<f32>(),
-        };
+        let rotm = attitude_svd(&cat_triangle_xyz, &obs_triangle_xyz)?.cast::<f32>();
 
         // Transform all observations, such that they align with the catalog stars
         let obs_xyz_mat =
@@ -332,18 +358,18 @@ impl StarMatcher {
         let obs_transformed = rotm * obs_xyz_mat;
 
         // Find close neighbors for each observation
-        let dotp_threshold = maths_rs::cos(self.inter_star_angle_tolerance);
+        let dotp_threshold = self.cos_inter_star_angle_tolerance;
         let mut selected_obs_xyz = Vec::new();
         let mut selected_cat_xyz = Vec::new();
         for obs_i in 0..obs_transformed.ncols() {
             // version 1: use spatial look up
             let obs_vec = obs_transformed.column(obs_i);
-            let obs = [obs_vec[0], obs_vec[1], obs_vec[2]];
+            let obs = std::array::from_fn(|i| obs_vec[i]);
 
             // Look up closest star in the catalog to the transformed position of the observation
             let closest_index = self.star_index.lookup_nearest(&obs);
 
-            // Use star if it is close than the allowed threshold
+            // Use star if it is closer than the allowed threshold
             let closest_cat_star = &self.stars_xyz[closest_index];
             if tree::dot_product(&obs, closest_cat_star) >= dotp_threshold {
                 selected_cat_xyz.push(*closest_cat_star);
@@ -353,19 +379,11 @@ impl StarMatcher {
 
         // Do not proceed if there are less than the minimum required amount of stars
         if selected_cat_xyz.len() < self.n_minimum_matches {
-            diagnostic_data.max_first_matches =
-                usize::max(diagnostic_data.max_first_matches, selected_cat_xyz.len());
-            return None;
+            return Err(StarError::NotEnoughFirstMatches(selected_cat_xyz.len()));
         }
 
         // Fit rotation matrix on selected observations
-        let rotm = match attitude_svd(&selected_cat_xyz, &selected_obs_xyz) {
-            None => {
-                diagnostic_data.second_svd_failures += 1;
-                return None;
-            }
-            Some(value) => value.cast::<f32>(),
-        };
+        let rotm = attitude_svd(&selected_cat_xyz, &selected_obs_xyz)?.cast::<f32>();
 
         // Transform all observations, such that they align with the catalog stars
         let obs_xyz_mat =
@@ -397,27 +415,19 @@ impl StarMatcher {
 
         // Do not proceed if there are less than the minimum required amount of stars
         if selected_cat_xyz.len() < self.n_minimum_matches {
-            diagnostic_data.max_refined_matches =
-                usize::max(diagnostic_data.max_refined_matches, selected_cat_xyz.len());
-            return None;
+            return Err(StarError::NotEnoughRefinedMatches(selected_cat_xyz.len()));
         }
 
         // Fit rotation matrix on selected observations
-        let final_rotm = match attitude_svd(&selected_cat_xyz, &selected_obs_xyz) {
-            None => {
-                diagnostic_data.third_svd_failures += 1;
-                return None;
-            }
-            Some(value) => value,
-        };
+        let final_rotm = attitude_svd(&selected_cat_xyz, &selected_obs_xyz)?;
 
         // Convert rotation matrix into quaternion
         let quat = na::UnitQuaternion::from_rotation_matrix(&na::Rotation3::from_matrix_unchecked(
             final_rotm,
         ));
 
-        //Return result with statistics
-        Some(MatchResult {
+        // Return result with statistics
+        Ok(MatchResult {
             quat: [quat.i as f32, quat.j as f32, quat.k as f32, quat.w as f32],
             match_ids: selected_cat_indices,
             n_matches: selected_cat_xyz.len() as u32,
@@ -431,6 +441,18 @@ impl StarMatcher {
     }
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum StarError {
+    #[error("Failed to create inter star index: {0}")]
+    InterStarIndexCreationError(String),
+    #[error("Failed to calculate singular value decomposition")]
+    SVDFailure,
+    #[error("Not enough first matches {0}")]
+    NotEnoughFirstMatches(usize),
+    #[error("Not enough refined matches {0}")]
+    NotEnoughRefinedMatches(usize),
+}
+
 /// Solve Wahba's problem using SVD method.
 ///
 /// Rotation matrix from inertial frame to sensor frame
@@ -441,7 +463,10 @@ impl StarMatcher {
 ///
 /// - `cat_xyz` - Catalog unit vectors in the inertial frame, 3xn matrix
 /// - `obs_xyz``- Measured unit vectors in the sensor frame, 3xn matrix
-pub fn attitude_svd(cat_xyz: &[[f32; 3]], obs_xyz: &[[f32; 3]]) -> Option<na::Matrix3<f64>> {
+pub fn attitude_svd(
+    cat_xyz: &[[f32; 3]],
+    obs_xyz: &[[f32; 3]],
+) -> Result<na::Matrix3<f64>, StarError> {
     let mut mat = na::Matrix3::<f64>::zeros();
 
     for i in 0..cat_xyz.len() {
@@ -469,7 +494,7 @@ pub fn attitude_svd(cat_xyz: &[[f32; 3]], obs_xyz: &[[f32; 3]]) -> Option<na::Ma
     let m = na::Matrix3::from_diagonal(&na::Vector3::new(1.0, 1.0, d));
     let t = (u * m) * v;
     match t.determinant() >= 0.0 {
-        true => Some(t),
-        false => None,
+        true => Ok(t),
+        false => Err(StarError::SVDFailure),
     }
 }

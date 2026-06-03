@@ -1,5 +1,3 @@
-from collections.abc import Iterator
-
 import numpy as np
 import numpy.typing as npt
 from typing_extensions import Self
@@ -26,24 +24,6 @@ class StarMatcher:
         float,
     ]: ...
 
-class TriangleFinder:
-    def __init__(
-        self,
-        ab: npt.NDArray[np.float32],
-        ac: npt.NDArray[np.float32],
-        bc: npt.NDArray[np.float32],
-    ) -> None: ...
-    def get(self) -> list[int]: ...
-
-class IterTriangleFinder:
-    def __init__(
-        self,
-        ab: npt.NDArray[np.float32],
-        ac: npt.NDArray[np.float32],
-        bc: npt.NDArray[np.float32],
-    ) -> None: ...
-    def __iter__(self) -> Iterator[list[int]]: ...
-
 class UnitVectorLookup:
     def __init__(self, vec: npt.NDArray[np.float32]) -> None: ...
     def lookup_nearest(self, key: npt.NDArray[np.float32]) -> int: ...
@@ -53,7 +33,9 @@ class UnitVectorLookup:
         magnitudes: npt.NDArray[np.float32],
         max_angle_rad: float,
         max_magnitude: float,
-    ) -> tuple[list[list[int]], list[float], list[float]]: ...
+        inter_star_angle: float,
+        tolerance_angle: float,
+    ) -> tuple[list[list[int]], list[float], list[float], list[list[int]]]: ...
     def look_up_close_angles(
         self,
         vectors: npt.NDArray[np.float32],
