@@ -33,7 +33,9 @@ class UnitVectorLookup:
         magnitudes: npt.NDArray[np.float32],
         max_angle_rad: float,
         max_magnitude: float,
-    ) -> tuple[list[list[int]], list[float], list[float]]: ...
+        inter_star_angle: float,
+        tolerance_angle: float,
+    ) -> tuple[list[list[int]], list[float], list[float], list[list[int]]]: ...
     def look_up_close_angles(
         self,
         vectors: npt.NDArray[np.float32],
